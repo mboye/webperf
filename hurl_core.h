@@ -8,6 +8,13 @@
 #ifndef HURL_CORE_H_
 #define HURL_CORE_H_
 
+/* Mac OS X - specific: MSG_NOSIGNAL not defined in OS X */
+#if defined(__APPLE__) || defined(__MACH__)
+# ifndef MSG_NOSIGNAL
+#   define MSG_NOSIGNAL SO_NOSIGPIPE
+# endif
+#endif
+
 #define HURL_MAX_CONNECTIONS 16
 #define HURL_MAX_DOMAIN_CONNECTIONS 6
 #define HURL_MAX_PIPELINE_REQUESTS 3
@@ -200,6 +207,7 @@ void hurl_server_free(HURLManager *manager, HURLServer *server);
 void hurl_path_free(HURLManager *manager, HURLPath *path);
 void hurl_connection_free(HURLConnection *connection);
 
-char *allocstrcpy(char *str, unsigned int str_len, unsigned int alloc_padding);
+//char *allocstrcpy(char *str, unsigned int str_len, unsigned int alloc_padding);
+char *hurl_allocstrcpy(char *str, unsigned int str_len, unsigned int alloc_padding);
 
 #endif /* HURL_CORE_H_ */

@@ -50,6 +50,11 @@ int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain);
 
 #define timeval_to_msec(t) (t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3
 
+// Pasi's toy implementation of log_debug, replace with the real implementation
+void log_debug(const char *func, const char *msg, ...) {
+	fprintf(stderr, "%s: %s", func, msg);
+}
+
 char *hurl_allocstrcpy(char *str, unsigned int str_len, unsigned int alloc_padding) {
 	char *newstr;
 	if (str != NULL) {
@@ -1193,7 +1198,7 @@ int split_domain_name(char *name, char *labels[]) {
 }
 
 int hurl_parse_response_code(char *line, char **code_text) {
-	int response_code;
+	long response_code;
 	char *str, *copy, *part, *eof_part;
 	char *split_str_ptr = NULL;
 	int offset = 0;
@@ -1725,7 +1730,7 @@ int hurl_recv(HURLConnection *connection, char *buffer, unsigned int buffer_len)
 
 	bzero(&poll_sock, sizeof(struct pollfd));
 	poll_sock.fd = connection->sock;
-	poll_sock.events = POLLIN || POLL_PRI;
+	poll_sock.events = POLLIN | POLL_PRI;
 	for (;;) {
 		switch (poll(&poll_sock, 1, connection->server->domain->manager->recv_timeout)) {
 		case -1:
@@ -1973,7 +1978,7 @@ int hurl_header_str(HURLHeader *headers, char *buffer, unsigned int buffer_len) 
 	while (h != NULL && print_len < buffer_len) {
 		/* size of key + ": " + size of value + "\r\n" + final "\r\n" + \0 */
 		header_len = strlen(h->key) + 2 + strlen(h->value) + 2 + 2 + 1;
-		if (buffer_len - print_len - header_len >= 0) {
+		if (buffer_len >= print_len + header_len) {
 			print_len += snprintf(buffer + print_len, buffer_len - print_len, "%s: %s\r\n", h->key, h->value);
 		} else {
 			/* The buffer is full. */

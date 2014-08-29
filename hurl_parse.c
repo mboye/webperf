@@ -47,7 +47,7 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 		return 0;
 	}
 
-	(*result)->protocol = allocstrcpy(url, eof_protocol - url, 1);
+	(*result)->protocol = hurl_allocstrcpy(url, eof_protocol - url, 1);
 	/* log_debug(__func__, "Protocol: %s", (*result)->protocol); */
 
 	if (strlen((*result)->protocol) + 3 == strlen(url)) {
@@ -109,12 +109,12 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 		log_debug(__func__, "Empty hostname.");
 		return 0;
 	}
-	(*result)->hostname = allocstrcpy(bgof_hostname, eof_hostname - bgof_hostname, 1);
+	(*result)->hostname = hurl_allocstrcpy(bgof_hostname, eof_hostname - bgof_hostname, 1);
 
 	if (bgof_path) {
-		(*result)->path = allocstrcpy(bgof_path, eof_url - bgof_path, 1);
+		(*result)->path = hurl_allocstrcpy(bgof_path, eof_url - bgof_path, 1);
 	} else {
-		(*result)->path = allocstrcpy("/", 1, 1);
+		(*result)->path = hurl_allocstrcpy("/", 1, 1);
 	}
 
 	/*
