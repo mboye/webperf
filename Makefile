@@ -1,4 +1,10 @@
-GCC=/usr/bin/gcc -std=gnu99 -pedantic -Wall
+# Recent Mac OS X versions deprecate OpenSSL, overruling that
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+        CCFLAGS += -Wno-deprecated-declarations
+endif
+
+GCC=/usr/bin/gcc -std=gnu99 -pedantic -Wall $(CCFLAGS)
 
 all: release
 
@@ -20,5 +26,5 @@ debug-static: hurl_core.c hurl_parse.c hurl_core.h
 
 clean: FORCE
 	rm -f libhurl.so libhurl.a *.o
-	
+
 FORCE:
