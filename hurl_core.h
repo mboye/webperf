@@ -207,7 +207,10 @@ void hurl_server_free(HURLManager *manager, HURLServer *server);
 void hurl_path_free(HURLManager *manager, HURLPath *path);
 void hurl_connection_free(HURLConnection *connection);
 
+int hurl_domain_nrof_paths(HURLDomain *domain, enum HURLDownloadState state);
+int hurl_nrof_paths(HURLManager *manager, enum HURLDownloadState state);
+
 //char *allocstrcpy(char *str, unsigned int str_len, unsigned int alloc_padding);
-char *hurl_allocstrcpy(char *str, unsigned int str_len, unsigned int alloc_padding);
+char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
 
 #endif /* HURL_CORE_H_ */

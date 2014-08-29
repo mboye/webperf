@@ -32,30 +32,30 @@
 void *hurl_domain_exec(void *domain_ptr);
 void *hurl_connection_exec(void *connection_ptr);
 HURLPath *hurl_server_dequeue(HURLServer *server);
-int hurl_connection_response(HURLConnection *connection, HURLPath *path, int pipelined, char **buffer, unsigned long *buffer_len, unsigned long *data_len,
+int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, unsigned long *buffer_len, unsigned long *data_len,
 		enum HTTPFeatureSupport *feature_persistence);
 int hurl_connection_request(HURLConnection *connection, HURLPath *path);
 void hurl_resolve(HURLDomain *domain); /* Default DNS resolution. */
 
-int hurl_header_str(HURLHeader *headers, char *buffer, unsigned int buffer_len);
+int hurl_header_str(HURLHeader *headers, char *buffer, int buffer_len);
 HURLHeader *hurl_headers_copy(HURLHeader *headers);
 
 /* unsigned int hurl_domain_nrof_paths(HURLDomain *domain); */
-int hurl_send(HURLConnection *connection, char *buffer, unsigned int buffer_len);
-int hurl_recv(HURLConnection *connection, char *buffer, unsigned int buffer_len);
+int hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len);
+int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len);
 
 int hurl_connect(HURLConnection *connection);
 void hurl_connection_close(HURLConnection *connection, enum HURLConnectionState state);
 int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain);
 
-#define timeval_to_msec(t) (t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3
+#define timeval_to_msec(t) (float)((t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3)
 
 // Pasi's toy implementation of log_debug, replace with the real implementation
 void log_debug(const char *func, const char *msg, ...) {
 	fprintf(stderr, "%s: %s", func, msg);
 }
 
-char *hurl_allocstrcpy(char *str, unsigned int str_len, unsigned int alloc_padding) {
+char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding) {
 	char *newstr;
 	if (str != NULL) {
 		if ((newstr = calloc(str_len + alloc_padding, sizeof(char))) == NULL) {
@@ -475,9 +475,9 @@ void *hurl_connection_exec(void *connection_ptr) {
 	char *buffer = NULL;
 	unsigned long buffer_len = 0, data_len = 0;
 	enum HTTPFeatureSupport feature_persistence = UNKNOWN_SUPPORT, feature_pipelining = UNKNOWN_SUPPORT;
-	int i;
+	unsigned int i;
 	HURLPath **queue;
-	int queue_len = 0;
+	unsigned int queue_len = 0;
 	unsigned int max_pipeline = domain->manager->max_pipeline;
 	int response_retval;
 	struct timeval eof_resolution, resolution_time;
@@ -751,7 +751,8 @@ int hurl_connect(HURLConnection *connection) {
 	int poll_retval;
 
 #ifndef HURL_NO_SSL
-	int ssl_error, ssl_connected = 0;
+	int ssl_error;
+	int ssl_connected = 0;
 	char ssl_error_str[256];
 	X509 *server_cert;
 	X509_NAME *subject_name;
@@ -788,7 +789,7 @@ int hurl_connect(HURLConnection *connection) {
 	connection->state = CONNECTION_STATE_IN_PROGRESS;
 	connection->reused = 0;
 
-	for (i = 0; i < domain->nrof_addresses; i++) {
+	for (i = 0; i < (int) domain->nrof_addresses; i++) {
 		/* Ignore IP addresses where connect() failed. */
 		if (domain->addresses[i] == NULL) {
 			continue;
@@ -849,18 +850,16 @@ int hurl_connect(HURLConnection *connection) {
 		poll_sock.events = POLLOUT;
 
 		/* Wait for connection to become ready. */
-		switch ((poll_retval = poll(&poll_sock, 1, timeout))) {
+		switch ((poll_retval = poll(&poll_sock, 1, (int) timeout))) {
 		case -1:
 			/* Poll failed. */
 			log_debug(__func__, "[ %s:%u ] Failed to poll with retval %d - %s", domain->domain, server->port, poll_retval, strerror(errno));
 			continue;
-			break;
 		default:
 		case 0:
 			/* Poll timed out. */
 			log_debug(__func__, "[ %s:%u ] The connection timed out.", domain->domain, server->port);
 			continue;
-			break;
 		case 1:
 			/* The socket is ready to send data. */
 			if (poll_sock.revents & POLLOUT) {
@@ -921,20 +920,18 @@ int hurl_connect(HURLConnection *connection) {
 
 			poll_sock.events = POLLIN | POLLOUT;
 			while (!ssl_connected) {
-				switch (poll(&poll_sock, 1, server->domain->manager->connect_timeout)) {
+				switch (poll(&poll_sock, 1, (int) server->domain->manager->connect_timeout)) {
 				case -1:
 					/* Poll failed. */
 					log_debug(__func__, "Failed to poll - %s\n", strerror(errno));
 					hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
 					return CONNECTION_ERROR;
-					break;
 				default:
 				case 0:
 					/* Poll timed out. */
 					log_debug(__func__, "The connection timed out.\n");
 					hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
 					return CONNECTION_ERROR;
-					break;
 				case 1:
 					/* The socket is ready. */
 
@@ -948,7 +945,7 @@ int hurl_connect(HURLConnection *connection) {
 							poll_sock.events = POLLOUT;
 							/* log_debug(__func__, "SSL wants WRITE"); */
 						} else {
-							ERR_error_string_n(ssl_error, ssl_error_str, sizeof(ssl_error_str));
+							ERR_error_string_n((unsigned long) ssl_error, ssl_error_str, sizeof(ssl_error_str));
 							log_debug(__func__, "SSL connect error: %s", ssl_error_str);
 							hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
 							return CONNECTION_ERROR;
@@ -991,7 +988,7 @@ int hurl_connect(HURLConnection *connection) {
 							char *dns_name = (char *) ASN1_STRING_data(current_name->d.dNSName);
 
 							/* Check for malicious \0 characters in name. */
-							if (ASN1_STRING_length(current_name->d.dNSName) != strlen(dns_name)) {
+							if (ASN1_STRING_length(current_name->d.dNSName) != (int) strlen(dns_name)) {
 								break;
 							} else {
 								/* Compare DNS name in certificate with expected name. */
@@ -1113,7 +1110,7 @@ void hurl_resolve(HURLDomain *domain) {
 }
 
 int hurl_connection_request(HURLConnection *connection, HURLPath *path) {
-	unsigned int request_len = 0, max_request_len;
+	size_t request_len = 0, max_request_len;
 	char *request;
 	HURLHeader *headers;
 	HURLManager *manager = connection->server->domain->manager;
@@ -1224,7 +1221,7 @@ int hurl_parse_response_code(char *line, char **code_text) {
 	return response_code;
 }
 
-int hurl_connection_response(HURLConnection *connection, HURLPath *path, int pipelined, char **buffer, unsigned long *buffer_len, unsigned long *data_len,
+int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, unsigned long *buffer_len, unsigned long *data_len,
 		enum HTTPFeatureSupport *feature_persistence) {
 	char *line;
 	int recv_len = 1;
@@ -1253,7 +1250,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, int pip
 	int chunk_len_len = 0;
 	unsigned int nrof_chunks = 0;
 	HURLManager *manager = connection->server->domain->manager;
-	int receive_buffer_len = manager->recv_buffer_len;
+	unsigned int receive_buffer_len = manager->recv_buffer_len;
 	char *receive_buffer = malloc(sizeof(char) * receive_buffer_len);
 	HURLHeader *headers = NULL;
 	char *key, *value;
@@ -1261,7 +1258,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, int pip
 	int transfer_complete = 0;
 	char *redirect_url = NULL;
 	const char *extra_slash;
-	int redirect_url_len;
+	size_t redirect_url_len;
 	HURLPath *path_created;
 	unsigned int body_recv_len = 0;
 
@@ -1365,7 +1362,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, int pip
 							log_debug(__func__, "[ %s:%u%.32s ] Content length: %ld", path->server->domain->domain, connection->server->port, path->path,
 									content_len);
 						} else if (strcasecmp(key, "content-type") == 0) {
-							content_type = hurl_allocstrcpy(value, strlen(value), 1);
+							content_type = hurl_allocstrcpy(value, strlen(value), (size_t) 1);
 							log_debug(__func__, "[ %s:%u%.32s ] Content type: %s", path->server->domain->domain, connection->server->port, path->path,
 									content_type);
 						} else if (strcasecmp(key, "location") == 0) {
@@ -1401,7 +1398,6 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, int pip
 						path->state = DOWNLOAD_STATE_ERROR;
 						pthread_mutex_unlock(&manager->lock);
 						return 0;
-						break;
 					}
 
 					free(line);
@@ -1720,7 +1716,7 @@ HURLPath *hurl_server_dequeue(HURLServer *server) {
 	return path;
 }
 
-int hurl_recv(HURLConnection *connection, char *buffer, unsigned int buffer_len) {
+int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 	struct pollfd poll_sock;
 	int recv_len = -1;
 
@@ -1732,7 +1728,7 @@ int hurl_recv(HURLConnection *connection, char *buffer, unsigned int buffer_len)
 	poll_sock.fd = connection->sock;
 	poll_sock.events = POLLIN | POLL_PRI;
 	for (;;) {
-		switch (poll(&poll_sock, 1, connection->server->domain->manager->recv_timeout)) {
+		switch (poll(&poll_sock, 1, (int) connection->server->domain->manager->recv_timeout)) {
 		case -1:
 			/* Poll failed. */
 			log_debug(__func__, "[ %s:%u ] Poll failed.", connection->server->domain->domain, connection->server->port);
@@ -1747,7 +1743,7 @@ int hurl_recv(HURLConnection *connection, char *buffer, unsigned int buffer_len)
 				if (connection->server->tls) {
 #ifndef HURL_NO_SSL
 					/* Secure connection. */
-					if ((recv_len = SSL_read(connection->ssl_handle, buffer, buffer_len)) > 0) {
+					if ((recv_len = SSL_read(connection->ssl_handle, buffer, (int) buffer_len)) > 0) {
 						/* Return number of bytes received. */
 						/* log_debug(__func__, "[ %s:%u ] SSL read: %d", connection->server->domain->domain, connection->server->port, recv_len); */
 						return recv_len;
@@ -1773,7 +1769,7 @@ int hurl_recv(HURLConnection *connection, char *buffer, unsigned int buffer_len)
 #endif
 				} else {
 					/* Normal connection. */
-					if ((recv_len = recv(connection->sock, buffer, buffer_len,
+					if ((recv_len = (int) recv(connection->sock, buffer, buffer_len,
 					MSG_NOSIGNAL)) > 0) {
 						/* Return number of bytes received. */
 						return recv_len;
@@ -1790,12 +1786,12 @@ int hurl_recv(HURLConnection *connection, char *buffer, unsigned int buffer_len)
 			}
 		}
 	}
-	return recv_len;
+	return -1;
 }
 
-int hurl_send(HURLConnection *connection, char *buffer, unsigned int buffer_len) {
+int hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len) {
 	struct pollfd poll_sock;
-	int data_sent = 0, send_len;
+	size_t data_sent = 0, send_len;
 	bzero(&poll_sock, sizeof(struct pollfd));
 	poll_sock.fd = connection->sock;
 	poll_sock.events = POLLOUT;
@@ -1971,15 +1967,15 @@ int hurl_header_add(HURLHeader **headers, char *key, char *value) {
 	}
 }
 
-int hurl_header_str(HURLHeader *headers, char *buffer, unsigned int buffer_len) {
+int hurl_header_str(HURLHeader *headers, char *buffer, int buffer_len) {
 	HURLHeader *h = headers;
-	unsigned int print_len = 0;
-	unsigned int header_len;
+	int print_len = 0;
+	int header_len;
 	while (h != NULL && print_len < buffer_len) {
 		/* size of key + ": " + size of value + "\r\n" + final "\r\n" + \0 */
-		header_len = strlen(h->key) + 2 + strlen(h->value) + 2 + 2 + 1;
+		header_len = (int) strlen(h->key) + 2 + (int) strlen(h->value) + 2 + 2 + 1;
 		if (buffer_len >= print_len + header_len) {
-			print_len += snprintf(buffer + print_len, buffer_len - print_len, "%s: %s\r\n", h->key, h->value);
+			print_len += snprintf(buffer + print_len, (size_t) (buffer_len - print_len), "%s: %s\r\n", h->key, h->value);
 		} else {
 			/* The buffer is full. */
 			return -1;
@@ -1987,7 +1983,7 @@ int hurl_header_str(HURLHeader *headers, char *buffer, unsigned int buffer_len) 
 		h = h->next;
 	}
 	/* Add final \r\n */
-	print_len += snprintf(buffer + print_len, buffer_len - print_len, "\r\n");
+	print_len += snprintf(buffer + print_len, (size_t) (buffer_len - print_len), "\r\n");
 	return print_len;
 }
 
@@ -2079,7 +2075,7 @@ int hurl_header_split_line(char *line, int line_len, char **key, char **value) {
 			/* Line terminator is missing */
 			value_len = line_len - bgof_value;
 		}
-		if ((*value = hurl_allocstrcpy(line + bgof_value, value_len, 1)) == NULL) {
+		if ((*value = hurl_allocstrcpy(line + bgof_value, (size _t)value_len, 1)) == NULL) {
 			free(*key);
 			*key = NULL;
 			*value = NULL;
