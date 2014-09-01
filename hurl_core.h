@@ -150,10 +150,10 @@ struct hurl_manager {
 	void (*hook_connection_close)(HURLPath *, HURLConnection *); /* Hook before calling close() */
 	int (*hook_send_request)(HURLPath *, HURLConnection *, int); /* Hook before a request is sent. */
 	void (*hook_header_received)(HURLPath *, int, HURLHeader *, unsigned int);
-	void (*hook_body_recv)(HURLPath *, char *, unsigned int);
-	void (*hook_header_recv)(HURLPath *, char *, unsigned int); /* Hook after entire header has been received. */
+	void (*hook_body_recv)(HURLPath *, char *, size_t);
+	void (*hook_header_recv)(HURLPath *, char *, size_t); /* Hook after entire header has been received. */
 	int (*hook_redirect)(HURLPath *, int, char *);
-	void (*hook_response_code)(HURLPath *, HURLConnection *, unsigned int, char *); /* Hook after HTTP response code has been found. */
+	void (*hook_response_code)(HURLPath *, HURLConnection *, int, char *); /* Hook after HTTP response code has been found. */
 	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, unsigned int); /* Hook at end of transfer when using pipelining */
 	void (*hook_request_sent)(HURLPath *, HURLConnection *); /* Hook after HTTP request has been sent. */
 	void *(*retag)(HURLPath *, char *); /* Create new tag for element in case of redirections. */
@@ -171,7 +171,7 @@ struct hurl_manager {
 struct hurl_parsed_url {
 	char *protocol;
 	char *hostname;
-	int port;
+	unsigned short port;
 	char *path;
 };
 
@@ -194,7 +194,7 @@ char *hurl_header_get(HURLHeader *headers, char *key);
 int hurl_exec(HURLManager *manager);
 void hurl_print_status(HURLManager *manager, FILE *fp);
 void hurl_headers_free(HURLHeader *headers);
-int hurl_header_split_line(char *line, int line_len, char **key, char **value);
+int hurl_header_split_line(char *line, size_t line_len, char **key, char **value);
 int hurl_header_exists(HURLHeader *headers, char *key);
 
 #ifndef __cplusplus

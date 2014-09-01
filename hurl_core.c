@@ -37,7 +37,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 int hurl_connection_request(HURLConnection *connection, HURLPath *path);
 void hurl_resolve(HURLDomain *domain); /* Default DNS resolution. */
 
-int hurl_header_str(HURLHeader *headers, char *buffer, int buffer_len);
+int hurl_header_str(HURLHeader *headers, char *buffer, size_t buffer_len);
 HURLHeader *hurl_headers_copy(HURLHeader *headers);
 
 /* unsigned int hurl_domain_nrof_paths(HURLDomain *domain); */
@@ -613,7 +613,7 @@ void *hurl_connection_exec(void *connection_ptr) {
 				for (i = 0; i < queue_len; i++) {
 					path = queue[i];
 					/* Receive pipelined response. */
-					if ((response_retval = hurl_connection_response(connection, path, 1, &buffer, &buffer_len, &data_len, &feature_persistence)) > 0) {
+					if ((response_retval = hurl_connection_response(connection, path, &buffer, &buffer_len, &data_len, &feature_persistence)) > 0) {
 						/* The entire response was received. */
 						gettimeofday(&path->response_received, NULL);
 						log_debug(__func__, "[ %s:%u%.32s ] Response received. ", domain->domain, server->port, path->path);
@@ -665,7 +665,7 @@ void *hurl_connection_exec(void *connection_ptr) {
 				if (manager->hook_send_request == NULL || (manager->hook_send_request != NULL && manager->hook_send_request(path, connection, 0))) {
 					if (hurl_connection_request(connection, path)) {
 						/* Receive HTTP response. */
-						if (hurl_connection_response(connection, path, 0, &buffer, &buffer_len, &data_len, &feature_persistence) >= 0) {
+						if (hurl_connection_response(connection, path, &buffer, &buffer_len, &data_len, &feature_persistence) >= 0) {
 							gettimeofday(&path->response_received, NULL);
 							if (domain->manager->feature_persistence == UNSUPPORTED || feature_persistence == UNSUPPORTED) {
 								/* Persistent connections not allowed: close connection */
@@ -1124,7 +1124,7 @@ int hurl_connection_request(HURLConnection *connection, HURLPath *path) {
 	}
 
 	/* File path. */
-	request_len += snprintf(request + request_len, max_request_len - request_len, "GET %s HTTP/1.1\r\n", path->path);
+	request_len += (size_t) snprintf(request + request_len, max_request_len - request_len, "GET %s HTTP/1.1\r\n", path->path);
 
 	/* Copy custom headers headers. */
 	headers = hurl_headers_copy(manager->headers);
@@ -1221,22 +1221,22 @@ int hurl_parse_response_code(char *line, char **code_text) {
 	return response_code;
 }
 
-int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, unsigned long *buffer_len, unsigned long *data_len,
+int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, size_t *buffer_len, size_t *data_len,
 		enum HTTPFeatureSupport *feature_persistence) {
 	char *line;
 	int recv_len = 1;
 	char *eof_header = NULL;
-	unsigned int header_len = 0;
+	size_t header_len = 0;
 	unsigned int header_line = 0;
 	char *bgof_line, *eof_line;
-	unsigned short line_len;
-	unsigned int received = 0;
-	unsigned int content_len = 0;
-	unsigned int hook_recv_body_offset = 0;
+	size_t line_len;
+	size_t received = 0;
+	size_t content_len = 0;
+	size_t hook_recv_body_offset = 0;
 	char *content_type;
 	char *bgof_value;
 	char *tmp;
-	unsigned int next_buffer_len;
+	size_t next_buffer_len;
 	int response_code = 0;
 	char *response_code_text = NULL;
 	char *redirect_location = NULL;
@@ -1285,11 +1285,11 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 			/* log_debug(__func__, "[%s][%u][%s] Received %d bytes.", path->server->domain->domain, server->port, path->path, recv_len); */
 
 			/* Expand connection buffer if necessary. */
-			if (*buffer_len - *data_len <= recv_len) {
+			if (*buffer_len - *data_len <= (unsigned long) recv_len) {
 				/* Buffer needs more space. */
 				/* log_debug(__func__, "[%s][%u][%s] Expanding buffer.", path->server->domain->domain, server->port, path->path); */
 
-				next_buffer_len = *data_len + recv_len;
+				next_buffer_len = *data_len + (size_t) recv_len;
 				if ((tmp = realloc(*buffer, next_buffer_len + 1)) != NULL) {
 					*buffer = tmp;
 					*buffer_len = next_buffer_len;
@@ -1299,13 +1299,13 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 				}
 			}
 			/* Copy received data into connection buffer. */
-			memcpy(*buffer + *data_len, receive_buffer, recv_len);
-			*data_len += recv_len;
+			memcpy(*buffer + *data_len, receive_buffer, (size_t) recv_len);
+			*data_len += (size_t) recv_len;
 			*(*buffer + *data_len) = '\0';
 
 			if (eof_header == NULL && (eof_header = strstr(*buffer, "\r\n\r\n")) != NULL) {
 				/* Header received. */
-				header_len = eof_header - *buffer + 4;
+				header_len = (size_t) (eof_header - *buffer + 4);
 
 				/* Call header received hook */
 				if (manager->hook_header_recv) {
@@ -1319,7 +1319,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 					if ((eof_line = strstr(bgof_line, "\r\n")) == NULL) {
 						break;
 					}
-					line_len = eof_line - bgof_line;
+					line_len = (size_t) (eof_line - bgof_line);
 					line = hurl_allocstrcpy(bgof_line, line_len, 1);
 					eof_line = line + line_len;
 					header_line++;
@@ -1967,15 +1967,15 @@ int hurl_header_add(HURLHeader **headers, char *key, char *value) {
 	}
 }
 
-int hurl_header_str(HURLHeader *headers, char *buffer, int buffer_len) {
+int hurl_header_str(HURLHeader *headers, char *buffer, size_t buffer_len) {
 	HURLHeader *h = headers;
-	int print_len = 0;
-	int header_len;
+	size_t print_len = 0;
+	size_t header_len;
 	while (h != NULL && print_len < buffer_len) {
 		/* size of key + ": " + size of value + "\r\n" + final "\r\n" + \0 */
-		header_len = (int) strlen(h->key) + 2 + (int) strlen(h->value) + 2 + 2 + 1;
+		header_len = strlen(h->key) + 2 + strlen(h->value) + 2 + 2 + 1;
 		if (buffer_len >= print_len + header_len) {
-			print_len += snprintf(buffer + print_len, (size_t) (buffer_len - print_len), "%s: %s\r\n", h->key, h->value);
+			print_len += (size_t) snprintf(buffer + print_len, buffer_len - print_len, "%s: %s\r\n", h->key, h->value);
 		} else {
 			/* The buffer is full. */
 			return -1;
@@ -1983,8 +1983,8 @@ int hurl_header_str(HURLHeader *headers, char *buffer, int buffer_len) {
 		h = h->next;
 	}
 	/* Add final \r\n */
-	print_len += snprintf(buffer + print_len, (size_t) (buffer_len - print_len), "\r\n");
-	return print_len;
+	print_len += (size_t) snprintf(buffer + print_len, buffer_len - print_len, "\r\n");
+	return (int) print_len;
 }
 
 void hurl_headers_free(HURLHeader *headers) {
@@ -2043,15 +2043,15 @@ char *hurl_header_get(HURLHeader *headers, char *key) {
 	return NULL;
 }
 
-int hurl_header_split_line(char *line, int line_len, char **key, char **value) {
+int hurl_header_split_line(char *line, size_t line_len, char **key, char **value) {
 	int i = 0;
 	int bgof_value = 0;
 	int value_len = -1;
-	for (i = 0; i < line_len - 1; i++) {
+	for (i = 0; i < (int) line_len - 1; i++) {
 		/* Find end of key. */
 		/* if (!bgof_value && line[i] == ':' && line[i + 1] == ' ') { */
 		if (!bgof_value && line[i] == ':') {
-			if ((*key = hurl_allocstrcpy(line, i, 1)) != NULL) {
+			if ((*key = hurl_allocstrcpy(line, (size_t) i, 1)) != NULL) {
 				if (line[i + 1] == ' ') {
 					bgof_value = i + 2;
 					i++;
@@ -2063,7 +2063,7 @@ int hurl_header_split_line(char *line, int line_len, char **key, char **value) {
 			}
 		} else if (bgof_value && line[i] == '\r' && line[i + 1] == '\n') {
 			/* HTTP newline */
-			value_len = i - bgof_value;
+			value_len = (int) (i - bgof_value);
 		} else if (bgof_value && line[i] == '\n') {
 			/* Regular newline */
 			value_len = i - bgof_value;
@@ -2073,9 +2073,9 @@ int hurl_header_split_line(char *line, int line_len, char **key, char **value) {
 	if (bgof_value) {
 		if (value_len == -1) {
 			/* Line terminator is missing */
-			value_len = line_len - bgof_value;
+			value_len = (int)line_len - bgof_value;
 		}
-		if ((*value = hurl_allocstrcpy(line + bgof_value, (size _t)value_len, 1)) == NULL) {
+		if ((*value = hurl_allocstrcpy(line + bgof_value, (size_t)value_len, 1)) == NULL) {
 			free(*key);
 			*key = NULL;
 			*value = NULL;
