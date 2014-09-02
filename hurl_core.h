@@ -86,7 +86,7 @@ struct hurl_server {
 	HURLPath *paths; /* Path of files on server. */
 	unsigned int nrof_paths; /* Number of files to be downloaded from domain. */
 	HURLConnection *connections; /* Connection structures. */
-	unsigned short max_connections; /* Maximum number of connections to this server. */
+	unsigned int max_connections; /* Maximum number of connections to this server. */
 	/*pthread_t thread; */
 	enum HURLServerState state; /* Server state. */
 	unsigned int pipeline_errors; /* Number of times pipelined requests failed. */
@@ -135,36 +135,37 @@ struct hurl_manager {
 	unsigned int max_connections; /* Maximum number of connections regardless of domain. */
 	unsigned int max_pipeline; /* Maximum number of pipelined requests on a connection. */
 	unsigned int keep_alive; /* Keep alive value in seconds. */
-	unsigned int connect_timeout; /* Connect timeout in milliseconds. */
-	unsigned int send_timeout; /* Send timeout in milliseconds. */
-	unsigned int recv_timeout; /* Receive timeout in milliseconds. */
+	int connect_timeout; /* Connect timeout in milliseconds. */
+	int send_timeout; /* Send timeout in milliseconds. */
+	int recv_timeout; /* Receive timeout in milliseconds. */
 	HURLDomain *domains; /* Pointers to domain structure. */
 	unsigned int nrof_domains; /* Number of domains. */
 	unsigned int connections; /* Number of open connections. */
 	unsigned int max_retries; /* Maximum number of dowmload retries. */
-	pthread_mutex_t lock; /* Mutex for connections variable. */
-	pthread_cond_t condition; /* Condition for connections variable. */
+
 	void (*hook_resolve)(HURLDomain *, HURLPath *); /* Override DNS resolution. */
 	int (*hook_pre_connect)(HURLPath *, HURLConnection *); /* Hook before calling connect() */
 	void (*hook_post_connect)(HURLPath *, HURLConnection *, int); /* Hook after calling connect() */
 	void (*hook_connection_close)(HURLPath *, HURLConnection *); /* Hook before calling close() */
 	int (*hook_send_request)(HURLPath *, HURLConnection *, int); /* Hook before a request is sent. */
-	void (*hook_header_received)(HURLPath *, int, HURLHeader *, unsigned int);
+	void (*hook_header_received)(HURLPath *, int, HURLHeader *, size_t);
 	void (*hook_body_recv)(HURLPath *, char *, size_t);
 	void (*hook_header_recv)(HURLPath *, char *, size_t); /* Hook after entire header has been received. */
 	int (*hook_redirect)(HURLPath *, int, char *);
 	void (*hook_response_code)(HURLPath *, HURLConnection *, int, char *); /* Hook after HTTP response code has been found. */
-	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, unsigned int); /* Hook at end of transfer when using pipelining */
+	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, size_t); /* Hook at end of transfer when using pipelining */
 	void (*hook_request_sent)(HURLPath *, HURLConnection *); /* Hook after HTTP request has been sent. */
 	void *(*retag)(HURLPath *, char *); /* Create new tag for element in case of redirections. */
 	void (*free_tag)(void *tag); /* Frees tag structure */
 	unsigned int recv_buffer_len; /* Size of receive buffer. */
-#ifndef HURL_NO_SSL
-	char *ca_path; /* Path to CA store for OpenSSL. */
-	char *ca_file; /* Path to CA file for OpenSSL. */
+	pthread_mutex_t lock; /* Mutex for connections variable. */
+	pthread_cond_t condition; /* Condition for connections variable. */
 	HURLHeader *headers;
 	struct timeval bgof_exec; /* When did the download process begin? */
 	float exec_time; /* When did the download process begin? */
+#ifndef HURL_NO_SSL
+	char *ca_path; /* Path to CA store for OpenSSL. */
+	char *ca_file; /* Path to CA file for OpenSSL. */
 #endif
 };
 
@@ -183,9 +184,8 @@ struct hurl_pipeline_queue {
 int hurl_parse_url(char *url, HURLParsedURL **result);
 void hurl_parsed_url_free(HURLParsedURL *url);
 
-void log_debug(const char *func, const char *msg, ...);
+void hurl_debug(const char *func, const char *msg, ...);
 
-HURLManager *hurl_manager_init();
 HURLDomain *hurl_get_domain(HURLManager *manager, char *domain);
 HURLServer *hurl_get_server(HURLDomain *domain, unsigned short port, int tls);
 HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, void *tag);
@@ -201,6 +201,7 @@ int hurl_header_exists(HURLHeader *headers, char *key);
 int strcasecmp(const char *s1, const char *s2);
 #endif
 
+HURLManager *hurl_manager_init();
 void hurl_manager_free(HURLManager *manager);
 void hurl_domain_free(HURLManager *manager, HURLDomain *domain);
 void hurl_server_free(HURLManager *manager, HURLServer *server);

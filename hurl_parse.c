@@ -36,23 +36,23 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 	eof_protocol = strstr(url, "://");
 	if (eof_protocol == NULL) {
 		free(*result);
-		log_debug(__func__, "Could not find :// in URL.");
+		hurl_debug(__func__, "Could not find :// in URL.");
 		return 0;
 	}
 
 	if (eof_protocol - url <= 0) {
 		/* Missing protocol. */
 		free(*result);
-		log_debug(__func__, "Could not find protocol in URL.");
+		hurl_debug(__func__, "Could not find protocol in URL.");
 		return 0;
 	}
 
 	(*result)->protocol = hurl_allocstrcpy(url, (size_t) (eof_protocol - url), 1);
-	/* log_debug(__func__, "Protocol: %s", (*result)->protocol); */
+	/* hurl_debug(__func__, "Protocol: %s", (*result)->protocol); */
 
 	if (strlen((*result)->protocol) + 3 == strlen(url)) {
 		hurl_parsed_url_free(*result);
-		log_debug(__func__, "Could not find hostname in URL.");
+		hurl_debug(__func__, "Could not find hostname in URL.");
 		return 0;
 	}
 	/* Find hostname */
@@ -86,11 +86,11 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 
 	/* Parse port number. */
 	if (bgof_port && eof_port) {
-		(*result)->port = strtol(bgof_port + 1, &eof_port, 10);
+		(*result)->port = (unsigned short) strtol(bgof_port + 1, &eof_port, 10);
 		if ((*result)->port <= 0 || (*result)->port > 65535) {
 			/* Invalid port number. */
 			hurl_parsed_url_free(*result);
-			log_debug(__func__, "Invalid port number.");
+			hurl_debug(__func__, "Invalid port number.");
 			return 0;
 		}
 	} else {
@@ -101,12 +101,12 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 		}
 	}
 
-	/*log_debug(__func__, "Port: %u", (*result)->port);*/
+	/*hurl_debug(__func__, "Port: %u", (*result)->port);*/
 
 	if (eof_hostname - bgof_hostname <= 0) {
 		/* Empty hostname. */
 		hurl_parsed_url_free(*result);
-		log_debug(__func__, "Empty hostname.");
+		hurl_debug(__func__, "Empty hostname.");
 		return 0;
 	}
 	(*result)->hostname = hurl_allocstrcpy(bgof_hostname, (size_t) (eof_hostname - bgof_hostname), 1);
@@ -118,8 +118,8 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 	}
 
 	/*
-	 log_debug(__func__, "Hostname: %s", (*result)->hostname);
-	 log_debug(__func__, "Path: %s", (*result)->path);
+	 hurl_debug(__func__, "Hostname: %s", (*result)->hostname);
+	 hurl_debug(__func__, "Path: %s", (*result)->path);
 	 */
 	return 1;
 

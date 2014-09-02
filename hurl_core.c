@@ -2,12 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hurl_core.h"
-#include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 #include <stdarg.h>
-#include <stdio.h>
 #include <math.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -21,6 +17,7 @@
 #include <sys/time.h>
 #include <ctype.h>
 #include <assert.h>
+#include "hurl_core.h"
 
 #ifndef HURL_NO_SSL
 #include <openssl/ssl.h>
@@ -41,18 +38,27 @@ int hurl_header_str(HURLHeader *headers, char *buffer, size_t buffer_len);
 HURLHeader *hurl_headers_copy(HURLHeader *headers);
 
 /* unsigned int hurl_domain_nrof_paths(HURLDomain *domain); */
-int hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len);
-int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len);
+ssize_t hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len);
+ssize_t hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len);
 
 int hurl_connect(HURLConnection *connection);
 void hurl_connection_close(HURLConnection *connection, enum HURLConnectionState state);
 int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain);
+unsigned char split_domain_name(char *name, char *labels[]);
+int hurl_parse_response_code(char *line, char **code_text);
 
 #define timeval_to_msec(t) (float)((t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3)
 
-// Pasi's toy implementation of log_debug, replace with the real implementation
-void log_debug(const char *func, const char *msg, ...) {
-	fprintf(stderr, "%s: %s", func, msg);
+void hurl_debug(const char *func, const char *msg, ...) {
+#ifndef NDEBUG
+	char template[1024];
+	va_list args;
+	snprintf(template, sizeof template, "[%u] %s(): %s\n", (unsigned int)pthread_self(), func, msg);
+	va_start(args, msg);
+	vfprintf(stderr, template, args);
+	va_end(args);
+	fflush(stderr);
+#endif
 }
 
 char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding) {
@@ -195,13 +201,13 @@ HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, voi
 
 	/* Get lock. */
 	pthread_mutex_lock(&manager->lock);
-	log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 
 	/* Get domain */
 	if ((domain = hurl_get_domain(manager, parsed_url->hostname)) == NULL) {
 		/* Release lock. */
 		pthread_mutex_unlock(&manager->lock);
-		log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+		hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 		hurl_parsed_url_free(parsed_url);
 		return NULL;
 	}
@@ -210,7 +216,7 @@ HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, voi
 	if ((server = hurl_get_server(domain, parsed_url->port, tls)) == NULL) {
 		/* Release lock. */
 		pthread_mutex_unlock(&manager->lock);
-		log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+		hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 		hurl_parsed_url_free(parsed_url);
 		return NULL;
 	}
@@ -221,7 +227,7 @@ HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, voi
 		while (p != NULL) {
 			if (strcasecmp(p->path, parsed_url->path) == 0) {
 				/* Duplicate path found */
-				log_debug(__func__, "Duplicate path detected. Ignoring it...");
+				hurl_debug(__func__, "Duplicate path detected. Ignoring it...");
 				hurl_parsed_url_free(parsed_url);
 				pthread_mutex_unlock(&manager->lock);
 				return NULL;
@@ -236,7 +242,7 @@ HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, voi
 		/* Out of memory. */
 		/* Release lock. */
 		pthread_mutex_unlock(&manager->lock);
-		log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+		hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 		hurl_parsed_url_free(parsed_url);
 		return NULL;
 	}
@@ -246,7 +252,7 @@ HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, voi
 		/* Out of memory. */
 		/* Release lock. */
 		pthread_mutex_unlock(&manager->lock);
-		log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+		hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 		hurl_parsed_url_free(parsed_url);
 		return NULL;
 	}
@@ -279,7 +285,7 @@ HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, voi
 
 	/* Release lock. */
 	pthread_mutex_unlock(&manager->lock);
-	log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 
 	hurl_parsed_url_free(parsed_url);
 	return path;
@@ -322,27 +328,27 @@ int hurl_exec(HURLManager *manager) {
 	struct timeval eof_exec, exec_time;
 
 	gettimeofday(&manager->bgof_exec, NULL);
-	log_debug(__func__, "Began execution @ %f", timeval_to_msec(&manager->bgof_exec));
+	hurl_debug(__func__, "Began execution @ %f", timeval_to_msec(&manager->bgof_exec));
 	/* Loop until everything has been downloaded. */
 	for (;;) {
 		/* Get lock. */
 		pthread_mutex_lock(&manager->lock);
-		log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+		hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 
 		nrof_paths = hurl_nrof_paths(manager, DOWNLOAD_STATE_PENDING);
 		if (nrof_paths == 0) {
 			pthread_mutex_unlock(&manager->lock);
-			log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+			hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 			break;
 		}
 
-		log_debug(__func__, "Remaining paths: %u", nrof_paths);
+		hurl_debug(__func__, "Remaining paths: %u", nrof_paths);
 
 		/* Calculate connection limit per domain. */
 		domain = manager->domains;
 		while (domain != NULL) {
 			if ((nrof_domain_paths = hurl_domain_nrof_paths(domain, DOWNLOAD_STATE_PENDING)) > 0) {
-				domain->max_connections = roundf((((float) nrof_domain_paths / (float) nrof_paths)) * (float) manager->max_connections);
+				domain->max_connections = (unsigned int) roundf((((float) nrof_domain_paths / (float) nrof_paths)) * (float) manager->max_connections);
 				if (domain->max_connections <= 0) {
 					/* Always allow one connection. */
 					domain->max_connections = 1;
@@ -355,7 +361,7 @@ int hurl_exec(HURLManager *manager) {
 				if (domain->max_connections > manager->max_domain_connections) {
 					domain->max_connections = manager->max_domain_connections;
 				}
-				log_debug(__func__, "Max connections: %s => %u", domain->domain, domain->max_connections);
+				hurl_debug(__func__, "Max connections: %s => %u", domain->domain, domain->max_connections);
 			} else {
 				/* Prevent a connection thread from being started for this domain. */
 				domain->max_connections = 0;
@@ -368,7 +374,7 @@ int hurl_exec(HURLManager *manager) {
 
 		/* Release lock. */
 		pthread_mutex_unlock(&manager->lock);
-		log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+		hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 
 		/* Start domain managers. */
 		domain = manager->domains;
@@ -376,7 +382,7 @@ int hurl_exec(HURLManager *manager) {
 			if (domain->max_connections > 0) {
 				if (pthread_create(&domain->thread, NULL, hurl_domain_exec, domain) != 0) {
 					/* Failed to start thread. */
-					log_debug(__func__, "Failed to create thread for '%s'", domain->domain);
+					hurl_debug(__func__, "Failed to create thread for '%s'", domain->domain);
 				} else {
 					domain->thread_running = 1;
 				}
@@ -390,13 +396,13 @@ int hurl_exec(HURLManager *manager) {
 			if (domain->thread_running) {
 				pthread_join(domain->thread, &thread_result_ptr);
 				domain->thread_running = 0;
-				log_debug(__func__, "Thread %s joined.", domain->domain);
+				hurl_debug(__func__, "Thread %s joined.", domain->domain);
 			}
 			domain = domain->next;
 		}
 
-		log_debug(__func__, "Completed: %d", hurl_nrof_paths(manager, DOWNLOAD_STATE_COMPLETED));
-		log_debug(__func__, "In progress: %d", hurl_nrof_paths(manager, DOWNLOAD_STATE_IN_PROGRESS));
+		hurl_debug(__func__, "Completed: %d", hurl_nrof_paths(manager, DOWNLOAD_STATE_COMPLETED));
+		hurl_debug(__func__, "In progress: %d", hurl_nrof_paths(manager, DOWNLOAD_STATE_IN_PROGRESS));
 
 	}
 	gettimeofday(&eof_exec, NULL);
@@ -411,18 +417,18 @@ void *hurl_domain_exec(void *domain_ptr) {
 	HURLServer *server;
 	void *thread_result_ptr;
 	int i;
-	log_debug(__func__, "[ %s ] Domain thread started.", domain->domain);
+	hurl_debug(__func__, "[ %s ] Domain thread started.", domain->domain);
 
 	/* Start connection controllers for servers. */
 	server = domain->servers;
 	while (server != NULL) {
 		/* Calculate the number of connections to allow for this server.*/
-		server->max_connections = roundf((((float) server->nrof_paths / (float) domain->nrof_paths)) * (float) domain->max_connections);
+		server->max_connections = (unsigned int) roundf((((float) server->nrof_paths / (float) domain->nrof_paths)) * (float) domain->max_connections);
 		if (server->max_connections <= 0) {
 			server->max_connections = 1;
 		}
-		log_debug(__func__, "[ %s:%u ] max. connections = %u", server->domain->domain, server->port, server->max_connections);
-		for (i = 0; i < server->max_connections; i++) {
+		hurl_debug(__func__, "[ %s:%u ] max. connections = %u", server->domain->domain, server->port, server->max_connections);
+		for (i = 0; i < (int) server->max_connections; i++) {
 			/* Create connection for server. */
 			if ((connection = calloc(1, sizeof(HURLConnection))) == NULL) {
 				/* Out of memory. */
@@ -454,7 +460,7 @@ void *hurl_domain_exec(void *domain_ptr) {
 		while (connection != NULL) {
 			next = connection->next;
 			pthread_join(connection->thread, &thread_result_ptr);
-			log_debug(__func__, "[%s] Domain thread ended.", connection->server->domain->domain);
+			hurl_debug(__func__, "[%s] Domain thread ended.", connection->server->domain->domain);
 			hurl_connection_free(connection);
 			connection = next;
 		}
@@ -482,45 +488,45 @@ void *hurl_connection_exec(void *connection_ptr) {
 	int response_retval;
 	struct timeval eof_resolution, resolution_time;
 
-	log_debug(__func__, "[ %s:%u ] Connection thread started.", domain->domain, server->port);
+	hurl_debug(__func__, "[ %s:%u ] Connection thread started.", domain->domain, server->port);
 	/* Enforce global connection limit. */
 	pthread_mutex_lock(&manager->lock);
-	log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 
 	/* Wait for permission to establish connection. */
 	while (domain->manager->connections >= domain->manager->max_connections) {
 		pthread_cond_wait(&manager->condition, &manager->lock);
-		/*	log_debug(__func__, "CONDITIONAL LOCK: Checking active connections counter."); */
+		/*	hurl_debug(__func__, "CONDITIONAL LOCK: Checking active connections counter."); */
 	}
 
 	/* Increment number of global connections. */
 	domain->manager->connections++;
 
-	log_debug(__func__, "[ %s:%u ] %d out of %d connections in use.", domain->domain, server->port, manager->connections, manager->max_connections);
+	hurl_debug(__func__, "[ %s:%u ] %d out of %d connections in use.", domain->domain, server->port, manager->connections, manager->max_connections);
 
 	/* Check if there are any files left to download. */
 	if ((path = hurl_server_dequeue(server)) == NULL) {
 		/* Nothing for this connection thread to do. */
-		log_debug(__func__, "[ %s:%u ] No files left to download.", domain->domain, server->port);
+		hurl_debug(__func__, "[ %s:%u ] No files left to download.", domain->domain, server->port);
 		/* Decrement active connections counter ** We already have the lock ** . */
-		log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+		hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 		domain->manager->connections--;
 		pthread_mutex_unlock(&manager->lock);
-		log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+		hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 		hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
 		pthread_exit(NULL);
 	}
 
 	pthread_mutex_unlock(&manager->lock);
-	log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 
 	/* Get DNS lock. */
 	pthread_mutex_lock(&domain->dns_lock);
-	log_debug(__func__, "Thread %u got DNS lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u got DNS lock.", (unsigned int) pthread_self());
 
 	/* Resolve domain name. */
 	if (domain->dns_state == DNS_STATE_UNRESOLVED) {
-		log_debug(__func__, "Resolving domain name.");
+		hurl_debug(__func__, "Resolving domain name.");
 		assert(domain->dns_trigger == NULL);
 		domain->dns_trigger = path;
 		gettimeofday(&domain->bgof_resolution, NULL);
@@ -535,18 +541,18 @@ void *hurl_connection_exec(void *connection_ptr) {
 		gettimeofday(&eof_resolution, NULL);
 		timersub(&eof_resolution, &domain->bgof_resolution, &resolution_time);
 		domain->resolution_time = timeval_to_msec(&resolution_time);
-		log_debug(__func__, "[ %s:%u ] Domain name resolved in %f ms", domain->domain, server->port, domain->resolution_time);
+		hurl_debug(__func__, "[ %s:%u ] Domain name resolved in %f ms", domain->domain, server->port, domain->resolution_time);
 
 	} else {
-		log_debug(__func__, "[ %s:%u ] Domain name has already been resolved.", domain->domain, server->port);
+		hurl_debug(__func__, "[ %s:%u ] Domain name has already been resolved.", domain->domain, server->port);
 	}
 	/* Release DNS lock. */
 	pthread_mutex_unlock(&domain->dns_lock);
-	log_debug(__func__, "Thread %u released DNS lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u released DNS lock.", (unsigned int) pthread_self());
 
 	/* Abort if DNS resolution failed. */
 	if (domain->dns_state == DNS_STATE_ERROR) {
-		log_debug(__func__, "[ %s:%u ] DNS resolution failed. Aborting...", domain->domain, server->port);
+		hurl_debug(__func__, "[ %s:%u ] DNS resolution failed. Aborting...", domain->domain, server->port);
 		pthread_mutex_lock(&manager->lock);
 		/* Decrement active connections counter. */
 		domain->manager->connections--;
@@ -574,11 +580,11 @@ void *hurl_connection_exec(void *connection_ptr) {
 			if (domain->manager->feature_pipelining == SUPPORTED && feature_persistence == SUPPORTED && feature_pipelining != UNSUPPORTED) {
 				/* Try to pipeline requests over persistent connection. */
 				queue = calloc(max_pipeline, sizeof(HURLPath *));
-				log_debug(__func__, "[ %s:%u ] Attempting to pipeline requests.", domain->domain, server->port);
+				hurl_debug(__func__, "[ %s:%u ] Attempting to pipeline requests.", domain->domain, server->port);
 
 				/* Get lock. */
 				pthread_mutex_lock(&server->domain->manager->lock);
-				log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+				hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 
 				/* Create pipeline queue. */
 				queue_len = 0;
@@ -596,7 +602,7 @@ void *hurl_connection_exec(void *connection_ptr) {
 
 				/* Release lock. */
 				pthread_mutex_unlock(&server->domain->manager->lock);
-				log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+				hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 
 				/* Send pipelined requests. */
 				for (i = 0; i < queue_len; i++) {
@@ -616,26 +622,26 @@ void *hurl_connection_exec(void *connection_ptr) {
 					if ((response_retval = hurl_connection_response(connection, path, &buffer, &buffer_len, &data_len, &feature_persistence)) > 0) {
 						/* The entire response was received. */
 						gettimeofday(&path->response_received, NULL);
-						log_debug(__func__, "[ %s:%u%.32s ] Response received. ", domain->domain, server->port, path->path);
+						hurl_debug(__func__, "[ %s:%u%.32s ] Response received. ", domain->domain, server->port, path->path);
 
 					} else if (response_retval == 0) {
 						/* The file was received and the server closed the connection. */
 						gettimeofday(&path->response_received, NULL);
 						if (i < queue_len) {
 							/* This was not the last request, so something went wrong. */
-							log_debug(__func__, "[ %s:%u%.32s ] Connection closed by server.", domain->domain, server->port, path->path);
+							hurl_debug(__func__, "[ %s:%u%.32s ] Connection closed by server.", domain->domain, server->port, path->path);
 						}
 						break;
 					} else {
 						gettimeofday(&path->response_received, NULL);
 						/* Error */
-						log_debug(__func__, "[ %s:%u%.32s ] Error. ", domain->domain, server->port, path->path);
+						hurl_debug(__func__, "[ %s:%u%.32s ] Error. ", domain->domain, server->port, path->path);
 						break;
 					}
 				}
 				/* Get lock. */
 				pthread_mutex_lock(&manager->lock);
-				log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+				hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 
 				/* Update download states. */
 				for (i = 0; i < queue_len; i++) {
@@ -656,7 +662,7 @@ void *hurl_connection_exec(void *connection_ptr) {
 
 				/* Release lock. */
 				pthread_mutex_unlock(&manager->lock);
-				log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+				hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 
 				continue;
 			} else {
@@ -670,19 +676,19 @@ void *hurl_connection_exec(void *connection_ptr) {
 							if (domain->manager->feature_persistence == UNSUPPORTED || feature_persistence == UNSUPPORTED) {
 								/* Persistent connections not allowed: close connection */
 								hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
-								log_debug(__func__, "[ %s:%u ] Connection closed by client.", domain->domain, server->port);
+								hurl_debug(__func__, "[ %s:%u ] Connection closed by client.", domain->domain, server->port);
 							}
 
 							/* Get lock. */
 							pthread_mutex_lock(&manager->lock);
-							log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+							hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 
 							/* Get next file to download. */
 							path = hurl_server_dequeue(server);
 
 							/* Release lock. */
 							pthread_mutex_unlock(&manager->lock);
-							log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+							hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 
 							continue;
 						}
@@ -702,14 +708,14 @@ void *hurl_connection_exec(void *connection_ptr) {
 			}
 
 			/* Fatal error: Could not connect to any servers. */
-			log_debug(__func__, "[ %s:%u ] Failed to connect.", domain->domain, connection->server->port);
+			hurl_debug(__func__, "[ %s:%u ] Failed to connect.", domain->domain, connection->server->port);
 			/* Get lock, update download state, and release lock. */
 			pthread_mutex_lock(&manager->lock);
-			log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+			hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 
 			path->state = DOWNLOAD_STATE_ERROR;
 			pthread_mutex_unlock(&manager->lock);
-			log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+			hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 		}
 
 		/* Get next file to download. */
@@ -720,12 +726,12 @@ void *hurl_connection_exec(void *connection_ptr) {
 	}
 	/* Decrement active connections counter. */
 	pthread_mutex_lock(&manager->lock);
-	log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 	domain->manager->connections--;
 	/* Notify waiting threads of change in number of connections. */
 	pthread_cond_broadcast(&domain->manager->condition);
 	pthread_mutex_unlock(&manager->lock);
-	log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 	/* Free memory */
 	free(buffer);
 	/* End connection thread. */
@@ -739,7 +745,7 @@ int hurl_connect(HURLConnection *connection) {
 	struct pollfd poll_sock;
 	int sock_errno;
 	unsigned int sock_errno_len;
-	unsigned int timeout = connection->server->domain->manager->connect_timeout;
+	int timeout = connection->server->domain->manager->connect_timeout;
 	HURLServer *server = connection->server;
 	HURLDomain *domain = connection->server->domain;
 	int i;
@@ -768,20 +774,20 @@ int hurl_connect(HURLConnection *connection) {
 
 #ifdef HURL_NO_SSL
 	if(connection->server->tls) {
-		log_debug(__func__, "Cannot connect: no SSL support.");
+		hurl_debug(__func__, "Cannot connect: no SSL support.");
 		return CONNECTION_ERROR;
 	}
 #endif
 
 	/* Check if a connection is already open. */
 	if (connection->state == CONNECTION_STATE_CONNECTED) {
-		log_debug(__func__, "[ %s:%u ] Reusing connection.", domain->domain, server->port);
+		hurl_debug(__func__, "[ %s:%u ] Reusing connection.", domain->domain, server->port);
 		connection->reused = 1;
 		return CONNECTION_REUSED;
 	}
 
 	if (connection->state == CONNECTION_STATE_ERROR) {
-		log_debug(__func__, "[ %s:%u ] Previous attempts to connect to this server have failed. Aborting...", domain->domain, server->port);
+		hurl_debug(__func__, "[ %s:%u ] Previous attempts to connect to this server have failed. Aborting...", domain->domain, server->port);
 		return CONNECTION_ERROR;
 	}
 
@@ -803,7 +809,7 @@ int hurl_connect(HURLConnection *connection) {
 
 			/* IPv4 */
 			if ((connection->sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-				log_debug(__func__, "[%s][%u] Failed to create socket: %s", domain->domain, server->port, strerror(errno));
+				hurl_debug(__func__, "[%s][%u] Failed to create socket: %s", domain->domain, server->port, strerror(errno));
 				continue;
 			}
 
@@ -814,7 +820,7 @@ int hurl_connect(HURLConnection *connection) {
 			address_len = sizeof(struct sockaddr_in6);
 			/* IPv6 */
 			if ((connection->sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) {
-				log_debug(__func__, "[%s][%u] Failed to create IPv6 socket: %s", domain->domain, server->port, strerror(errno));
+				hurl_debug(__func__, "[%s][%u] Failed to create IPv6 socket: %s", domain->domain, server->port, strerror(errno));
 				continue;
 			}
 			/* Set port number. */
@@ -823,23 +829,23 @@ int hurl_connect(HURLConnection *connection) {
 
 		/* Get socket flags. */
 		if ((sock_flags = fcntl(connection->sock, F_GETFL, 0)) < 0) {
-			log_debug(__func__, "Failed to get socket flags - %s.", strerror(
+			hurl_debug(__func__, "Failed to get socket flags - %s.", strerror(
 			errno));
 			continue;
 		}
 
 		/* Change socket to use non-blocking IO. */
 		if ((fcntl(connection->sock, F_SETFL, sock_flags | O_NONBLOCK)) < 0) {
-			log_debug(__func__, "Failed to switch socket to non-blocking mode - %s.", strerror(errno));
+			hurl_debug(__func__, "Failed to switch socket to non-blocking mode - %s.", strerror(errno));
 			continue;
 		}
 
 		/* Connect to server. */
-		log_debug(__func__, "[ %s:%u ] Connecting to server...", domain->domain, server->port);
+		hurl_debug(__func__, "[ %s:%u ] Connecting to server...", domain->domain, server->port);
 		gettimeofday(&connection->begin_connect, NULL);
 		if (connect(connection->sock, &address, address_len) < 0) {
 			if (errno != EINPROGRESS) {
-				log_debug(__func__, "[ %s:%u ] Failed to connect: %s", domain->domain, server->port, strerror(errno));
+				hurl_debug(__func__, "[ %s:%u ] Failed to connect: %s", domain->domain, server->port, strerror(errno));
 				continue;
 			}
 		}
@@ -853,12 +859,12 @@ int hurl_connect(HURLConnection *connection) {
 		switch ((poll_retval = poll(&poll_sock, 1, (int) timeout))) {
 		case -1:
 			/* Poll failed. */
-			log_debug(__func__, "[ %s:%u ] Failed to poll with retval %d - %s", domain->domain, server->port, poll_retval, strerror(errno));
+			hurl_debug(__func__, "[ %s:%u ] Failed to poll with retval %d - %s", domain->domain, server->port, poll_retval, strerror(errno));
 			continue;
 		default:
 		case 0:
 			/* Poll timed out. */
-			log_debug(__func__, "[ %s:%u ] The connection timed out.", domain->domain, server->port);
+			hurl_debug(__func__, "[ %s:%u ] The connection timed out.", domain->domain, server->port);
 			continue;
 		case 1:
 			/* The socket is ready to send data. */
@@ -867,24 +873,24 @@ int hurl_connect(HURLConnection *connection) {
 				sock_errno_len = sizeof(sock_errno);
 				if (getsockopt(connection->sock, SOL_SOCKET, SO_ERROR, &sock_errno, &sock_errno_len) < 0) {
 					/* Failed to retrieve socket status. */
-					log_debug(__func__, "[ %s:%u ] Failed to get socket status - %s", domain->domain, server->port, strerror(errno));
+					hurl_debug(__func__, "[ %s:%u ] Failed to get socket status - %s", domain->domain, server->port, strerror(errno));
 					continue;
 				} else {
 					if (sock_errno != 0) {
 						/* Failed to connect. */
-						log_debug(__func__, "[ %s:%u ] Failed to connect: %s", domain->domain, server->port, strerror(sock_errno));
+						hurl_debug(__func__, "[ %s:%u ] Failed to connect: %s", domain->domain, server->port, strerror(sock_errno));
 						continue;
 					}
 				}
 			}
 			break;
 		}
-		log_debug(__func__, "[ %s:%u ]  Connected to server.", domain->domain, server->port);
+		hurl_debug(__func__, "[ %s:%u ]  Connected to server.", domain->domain, server->port);
 
 #ifndef HURL_NO_SSL
 		/* Switch to secure connection? */
 		if (connection->server->tls) {
-			log_debug(__func__, "Switching to TLS.");
+			hurl_debug(__func__, "Switching to TLS.");
 			gettimeofday(&ssl_begin_connect, NULL);
 			/* Context is SSL v. 2 or 3. */
 			connection->ssl_context = SSL_CTX_new(SSLv23_client_method());
@@ -896,7 +902,7 @@ int hurl_connect(HURLConnection *connection) {
 			/* Enable verification of server certificate. */
 			if (!SSL_CTX_load_verify_locations(connection->ssl_context, connection->server->domain->manager->ca_file,
 					connection->server->domain->manager->ca_path)) {
-				log_debug(__func__, "Failed to load SSL certificates.");
+				hurl_debug(__func__, "Failed to load SSL certificates.");
 				hurl_connection_close(connection, CONNECTION_STATE_ERROR);
 				return CONNECTION_ERROR;
 			}
@@ -907,7 +913,7 @@ int hurl_connect(HURLConnection *connection) {
 			/* Create SSL handle for connection. */
 			connection->ssl_handle = SSL_new(connection->ssl_context);
 			if (connection->ssl_handle == NULL) {
-				log_debug(__func__, "SSL error.");
+				hurl_debug(__func__, "SSL error.");
 				hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
 				return CONNECTION_ERROR;
 			}
@@ -923,13 +929,13 @@ int hurl_connect(HURLConnection *connection) {
 				switch (poll(&poll_sock, 1, (int) server->domain->manager->connect_timeout)) {
 				case -1:
 					/* Poll failed. */
-					log_debug(__func__, "Failed to poll - %s\n", strerror(errno));
+					hurl_debug(__func__, "Failed to poll - %s\n", strerror(errno));
 					hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
 					return CONNECTION_ERROR;
 				default:
 				case 0:
 					/* Poll timed out. */
-					log_debug(__func__, "The connection timed out.\n");
+					hurl_debug(__func__, "The connection timed out.\n");
 					hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
 					return CONNECTION_ERROR;
 				case 1:
@@ -940,18 +946,18 @@ int hurl_connect(HURLConnection *connection) {
 						ssl_error = SSL_get_error(connection->ssl_handle, connect_retval);
 						if (ssl_error == SSL_ERROR_WANT_READ) {
 							poll_sock.events = POLLIN;
-							/* log_debug(__func__, "SSL wants READ"); */
+							/* hurl_debug(__func__, "SSL wants READ"); */
 						} else if (ssl_error == SSL_ERROR_WANT_WRITE) {
 							poll_sock.events = POLLOUT;
-							/* log_debug(__func__, "SSL wants WRITE"); */
+							/* hurl_debug(__func__, "SSL wants WRITE"); */
 						} else {
 							ERR_error_string_n((unsigned long) ssl_error, ssl_error_str, sizeof(ssl_error_str));
-							log_debug(__func__, "SSL connect error: %s", ssl_error_str);
+							hurl_debug(__func__, "SSL connect error: %s", ssl_error_str);
 							hurl_connection_close(connection, CONNECTION_STATE_CLOSED);
 							return CONNECTION_ERROR;
 						}
 					} else {
-						log_debug(__func__, "The SSL connection is ready.");
+						hurl_debug(__func__, "The SSL connection is ready.");
 						ssl_connected = 1;
 					}
 				}
@@ -962,22 +968,22 @@ int hurl_connect(HURLConnection *connection) {
 			server_cert = SSL_get_peer_certificate(connection->ssl_handle);
 			subject_name = X509_get_subject_name(server_cert);
 			if (X509_NAME_get_text_by_NID(subject_name, NID_commonName, common_name, sizeof(common_name)) != -1) {
-				log_debug(__func__, "Checking certificate common name.");
+				hurl_debug(__func__, "Checking certificate common name.");
 				/* Check if common name is *.domain.com */
 				if (hurl_verify_ssl_scope(connection->server->domain->domain, common_name)) {
 					certificate_ok = 1;
 				} else {
-					log_debug(__func__, "SSL: Expected %s but got %s", connection->server->domain->domain, common_name);
+					hurl_debug(__func__, "SSL: Expected %s but got %s", connection->server->domain->domain, common_name);
 				}
 			} else {
-				log_debug(__func__, "Could not get common name of certificate.");
+				hurl_debug(__func__, "Could not get common name of certificate.");
 			}
 
 			if (!certificate_ok) {
 				/* Check "Subject Alternative Name" */
 				if ((san_names = X509_get_ext_d2i(server_cert,
 				NID_subject_alt_name, NULL, NULL)) != NULL) {
-					log_debug(__func__, "Checking certificate for Subject Alternative Names");
+					hurl_debug(__func__, "Checking certificate for Subject Alternative Names");
 
 					/* Get number of names. */
 					san_names_nb = sk_GENERAL_NAME_num(san_names);
@@ -992,7 +998,7 @@ int hurl_connect(HURLConnection *connection) {
 								break;
 							} else {
 								/* Compare DNS name in certificate with expected name. */
-								log_debug(__func__, "SAN Check: '%s' vs. '%s'", connection->server->domain->domain, dns_name);
+								hurl_debug(__func__, "SAN Check: '%s' vs. '%s'", connection->server->domain->domain, dns_name);
 								if (hurl_verify_ssl_scope(connection->server->domain->domain, dns_name)) {
 									certificate_ok = 1;
 									break;
@@ -1007,11 +1013,11 @@ int hurl_connect(HURLConnection *connection) {
 			gettimeofday(&ssl_end_connect, NULL);
 
 			if (certificate_ok) {
-				log_debug(__func__, "Certificate verified.");
+				hurl_debug(__func__, "Certificate verified.");
 				/* Change connection state. */
 				connection->state = CONNECTION_STATE_CONNECTED;
 			} else {
-				log_debug(__func__, "Certificate verification failed.");
+				hurl_debug(__func__, "Certificate verification failed.");
 				hurl_connection_close(connection, CONNECTION_STATE_ERROR);
 				return CONNECTION_ERROR;
 			}
@@ -1027,9 +1033,9 @@ int hurl_connect(HURLConnection *connection) {
 		/* Get size of receive buffer. */
 		if (manager->recv_buffer_len == 0) {
 			if (getsockopt(connection->sock, SOL_SOCKET, SO_RCVBUF, (void *) &manager->recv_buffer_len, &sockopt_len) == 0) {
-				log_debug(__func__, "Receive buffer size: %d", manager->recv_buffer_len);
+				hurl_debug(__func__, "Receive buffer size: %d", manager->recv_buffer_len);
 			} else {
-				log_debug(__func__, "Failed to get receive buffer size: %s", strerror(errno));
+				hurl_debug(__func__, "Failed to get receive buffer size: %s", strerror(errno));
 			}
 		}
 
@@ -1070,7 +1076,7 @@ void hurl_resolve(HURLDomain *domain) {
 		for (resolver_answer = resolver_result; resolver_answer != NULL; resolver_answer = resolver_answer->ai_next) {
 			domain->nrof_addresses++;
 		}
-		log_debug(__func__, "[ %s ] Number of addresses: %d", domain->domain, domain->nrof_addresses);
+		hurl_debug(__func__, "[ %s ] Number of addresses: %d", domain->domain, domain->nrof_addresses);
 		if (domain->nrof_addresses > 0) {
 
 			/* Allocate pointer space. */
@@ -1090,10 +1096,10 @@ void hurl_resolve(HURLDomain *domain) {
 
 				if (domain->addresses[i]->sa_family == AF_INET) {
 					inet_ntop(AF_INET, &((struct sockaddr_in *) domain->addresses[i])->sin_addr, address_str, INET6_ADDRSTRLEN);
-					log_debug(__func__, "[ %s ] %s", domain->domain, address_str);
+					hurl_debug(__func__, "[ %s ] %s", domain->domain, address_str);
 				} else {
 					inet_ntop(AF_INET6, &((struct sockaddr_in6 *) domain->addresses[i])->sin6_addr, address_str, INET6_ADDRSTRLEN);
-					log_debug(__func__, "[ %s ] %s", domain->domain, address_str);
+					hurl_debug(__func__, "[ %s ] %s", domain->domain, address_str);
 				}
 				i++;
 			}
@@ -1104,7 +1110,7 @@ void hurl_resolve(HURLDomain *domain) {
 		}
 	} else {
 		/* Resolution failed. */
-		log_debug(__func__, "[ %s ] Resolver error: %s", domain->domain, gai_strerror(resolver_retval));
+		hurl_debug(__func__, "[ %s ] Resolver error: %s", domain->domain, gai_strerror(resolver_retval));
 		domain->dns_state = DNS_STATE_ERROR;
 	}
 }
@@ -1119,7 +1125,7 @@ int hurl_connection_request(HURLConnection *connection, HURLPath *path) {
 	max_request_len = strlen(path->path) + strlen(path->server->domain->domain) + 512;
 
 	if ((request = calloc(max_request_len, sizeof(char))) == NULL) {
-		log_debug(__func__, "Out of memory.");
+		hurl_debug(__func__, "Out of memory.");
 		return 0;
 	}
 
@@ -1148,11 +1154,11 @@ int hurl_connection_request(HURLConnection *connection, HURLPath *path) {
 	hurl_headers_free(headers);
 
 	if (header_len > 0) {
-		request_len += header_len;
+		request_len += (size_t) header_len;
 
-		if (hurl_send(connection, request, request_len) != request_len) {
+		if (hurl_send(connection, request, request_len) != (int) request_len) {
 			free(request);
-			log_debug(__func__, "[ %s:%u%.32s ] Failed to send request.", connection->server->domain->domain, connection->server->port, path->path);
+			hurl_debug(__func__, "[ %s:%u%.32s ] Failed to send request.", connection->server->domain->domain, connection->server->port, path->path);
 			return 0;
 		}
 
@@ -1165,24 +1171,24 @@ int hurl_connection_request(HURLConnection *connection, HURLPath *path) {
 		}
 
 		/* The request was sent. */
-		log_debug(__func__, "[ %s:%u%.32s ] Request sent.", connection->server->domain->domain, connection->server->port, path->path);
+		hurl_debug(__func__, "[ %s:%u%.32s ] Request sent.", connection->server->domain->domain, connection->server->port, path->path);
 		free(request);
 		return 1;
 	} else {
 		/* Request buffer is too small. */
-		log_debug(__func__, "ERROR: Request buffer was too small. Could not send request.");
+		hurl_debug(__func__, "ERROR: Request buffer was too small. Could not send request.");
 		free(request);
 		return 0;
 	}
 }
 /* Warning: labels array size should always be 127 */
-int split_domain_name(char *name, char *labels[]) {
-	int nrof_labels = 0;
+unsigned char split_domain_name(char *name, char *labels[]) {
+	unsigned char nrof_labels = 0;
 	char *name_tmp, *name_split_ptr, *label;
 	name_tmp = strdup(name);
 	while ((label = strtok_r(name_tmp, ".", &name_split_ptr)) != NULL) {
-		if (nrof_labels > 127) {
-			log_debug(__func__, "WARNING: Max labels reached.");
+		if (nrof_labels == 127) {
+			hurl_debug(__func__, "WARNING: Max labels reached.");
 			break;
 		}
 		labels[nrof_labels] = strdup(label);
@@ -1195,7 +1201,7 @@ int split_domain_name(char *name, char *labels[]) {
 }
 
 int hurl_parse_response_code(char *line, char **code_text) {
-	long response_code;
+	int response_code;
 	char *str, *copy, *part, *eof_part;
 	char *split_str_ptr = NULL;
 	int offset = 0;
@@ -1207,10 +1213,10 @@ int hurl_parse_response_code(char *line, char **code_text) {
 	offset += strlen(part) + 1;
 	part = strtok_r(NULL, " ", &split_str_ptr);
 	offset += strlen(part);
-	response_code = strtol(part, &eof_part, 10);
+	response_code = (int) strtol(part, &eof_part, 10);
 	if (response_code == LONG_MIN || response_code == LONG_MAX || response_code <= 0 || response_code > INT_MAX) {
 		free(copy);
-		log_debug(__func__, "Failed to parse response code.");
+		hurl_debug(__func__, "Failed to parse response code.");
 		return -1;
 	}
 	/* Get response code text. */
@@ -1224,7 +1230,7 @@ int hurl_parse_response_code(char *line, char **code_text) {
 int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, size_t *buffer_len, size_t *data_len,
 		enum HTTPFeatureSupport *feature_persistence) {
 	char *line;
-	int recv_len = 1;
+	ssize_t recv_len = 1; /* Set to 1 to enter receive loop first time */
 	char *eof_header = NULL;
 	size_t header_len = 0;
 	unsigned int header_line = 0;
@@ -1243,10 +1249,10 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 	char *transfer_encoding = NULL;
 	int chunked_encoding = 0;
 	char *chunk_ptr = NULL;
-	int chunk_len = 0;
+	size_t chunk_len = 0;
 	char chunk_len_hex[16];
-	int k;
-	int unprocessed_len = 0;
+	size_t k;
+	size_t unprocessed_len = 0;
 	int chunk_len_len = 0;
 	unsigned int nrof_chunks = 0;
 	HURLManager *manager = connection->server->domain->manager;
@@ -1254,13 +1260,13 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 	char *receive_buffer = malloc(sizeof(char) * receive_buffer_len);
 	HURLHeader *headers = NULL;
 	char *key, *value;
-	unsigned int overhead = 0;
+	size_t overhead = 0;
 	int transfer_complete = 0;
 	char *redirect_url = NULL;
 	const char *extra_slash;
 	size_t redirect_url_len;
 	HURLPath *path_created;
-	unsigned int body_recv_len = 0;
+	size_t body_recv_len = 0;
 
 	/* Allocate buffer. */
 	if (*buffer == NULL) {
@@ -1270,31 +1276,27 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 		*data_len = 0;
 	} else {
 		received = *data_len;
-		log_debug(__func__, "[ %s:%u%.32s ] %ld bytes already in buffer.", connection->server->domain->domain, connection->server->port, path->path, received);
+		hurl_debug(__func__, "[ %s:%u%.32s ] %ld bytes already in buffer.", connection->server->domain->domain, connection->server->port, path->path, received);
 	}
 
-	log_debug(__func__, "[ %s:%u%.32s ] Waiting for response.", path->server->domain->domain, connection->server->port, path->path);
-
-	if (strstr(path->path, "pixel-vfl3z5WfW.gif")) {
-		log_debug(__func__, "Troublesome element!");
-	}
+	hurl_debug(__func__, "[ %s:%u%.32s ] Waiting for response.", path->server->domain->domain, connection->server->port, path->path);
 
 	/* While receiving data or if socket was not ready. */
 	while (recv_len > 0) {
 		if ((recv_len = hurl_recv(connection, receive_buffer, receive_buffer_len)) > 0) {
-			/* log_debug(__func__, "[%s][%u][%s] Received %d bytes.", path->server->domain->domain, server->port, path->path, recv_len); */
+			/* hurl_debug(__func__, "[%s][%u][%s] Received %d bytes.", path->server->domain->domain, server->port, path->path, recv_len); */
 
 			/* Expand connection buffer if necessary. */
 			if (*buffer_len - *data_len <= (unsigned long) recv_len) {
 				/* Buffer needs more space. */
-				/* log_debug(__func__, "[%s][%u][%s] Expanding buffer.", path->server->domain->domain, server->port, path->path); */
+				/* hurl_debug(__func__, "[%s][%u][%s] Expanding buffer.", path->server->domain->domain, server->port, path->path); */
 
 				next_buffer_len = *data_len + (size_t) recv_len;
 				if ((tmp = realloc(*buffer, next_buffer_len + 1)) != NULL) {
 					*buffer = tmp;
 					*buffer_len = next_buffer_len;
 				} else {
-					log_debug(__func__, "Out of memory.");
+					hurl_debug(__func__, "Out of memory.");
 					return 0;
 				}
 			}
@@ -1312,7 +1314,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 					manager->hook_header_recv(path, *buffer, header_len);
 				}
 
-				log_debug(__func__, "[ %s:%u%.32s ] Header received.", path->server->domain->domain, connection->server->port, path->path);
+				hurl_debug(__func__, "[ %s:%u%.32s ] Header received.", path->server->domain->domain, connection->server->port, path->path);
 				/* Parse header. */
 				bgof_line = *buffer;
 				while (bgof_line < eof_header) {
@@ -1331,7 +1333,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						if (manager->hook_response_code) {
 							manager->hook_response_code(path, connection, response_code, response_code_text);
 						}
-						log_debug(__func__, "[ %s:%u%.32s ] Response code: %d %s", path->server->domain->domain, connection->server->port, path->path,
+						hurl_debug(__func__, "[ %s:%u%.32s ] Response code: %d %s", path->server->domain->domain, connection->server->port, path->path,
 								response_code, response_code_text);
 						free(response_code_text);
 					} else if (strncasecmp(line, "http/1.0", strlen("http/1.0")) == 0) {
@@ -1341,14 +1343,14 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						if (manager->hook_response_code) {
 							manager->hook_response_code(path, connection, response_code, response_code_text);
 						}
-						log_debug(__func__, "[ %s:%u%.32s ] Response code: %d %s", path->server->domain->domain, connection->server->port, path->path,
+						hurl_debug(__func__, "[ %s:%u%.32s ] Response code: %d %s", path->server->domain->domain, connection->server->port, path->path,
 								response_code, response_code_text);
 						free(response_code_text);
 					} else if (hurl_header_split_line(line, line_len, &key, &value)) {
 						/* Add header to list. */
 						hurl_header_add(&headers, key, value);
 
-						/* log_debug(__func__, "[%s][%u][%s] HEADER: %s", path->server->domain->domain, server->port, path->path, line); */
+						/* hurl_debug(__func__, "[%s][%u][%s] HEADER: %s", path->server->domain->domain, server->port, path->path, line); */
 						if (strcasecmp(key, "connection") == 0) {
 							/* Check how the server will treat this connection. */
 							if ((bgof_value = strstr(line, ": ")) != NULL) {
@@ -1358,26 +1360,26 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 								}
 							}
 						} else if (strcasecmp(key, "content-length") == 0) {
-							content_len = strtol(value, NULL, 10);
-							log_debug(__func__, "[ %s:%u%.32s ] Content length: %ld", path->server->domain->domain, connection->server->port, path->path,
+							content_len = (size_t) strtol(value, NULL, 10);
+							hurl_debug(__func__, "[ %s:%u%.32s ] Content length: %ld", path->server->domain->domain, connection->server->port, path->path,
 									content_len);
 						} else if (strcasecmp(key, "content-type") == 0) {
 							content_type = hurl_allocstrcpy(value, strlen(value), (size_t) 1);
-							log_debug(__func__, "[ %s:%u%.32s ] Content type: %s", path->server->domain->domain, connection->server->port, path->path,
+							hurl_debug(__func__, "[ %s:%u%.32s ] Content type: %s", path->server->domain->domain, connection->server->port, path->path,
 									content_type);
 						} else if (strcasecmp(key, "location") == 0) {
 							redirect_location = hurl_allocstrcpy(value, strlen(value), 1);
-							log_debug(__func__, "[ %s:%u%.32s ] Redirect location: %s", path->server->domain->domain, connection->server->port, path->path,
+							hurl_debug(__func__, "[ %s:%u%.32s ] Redirect location: %s", path->server->domain->domain, connection->server->port, path->path,
 									redirect_location);
 						} else if (strcasecmp(key, "transfer-encoding") == 0) {
 							transfer_encoding = hurl_allocstrcpy(value, strlen(value), 1);
-							log_debug(__func__, "[ %s:%u%.32s ] Transfer encoding: %s", path->server->domain->domain, connection->server->port, path->path,
+							hurl_debug(__func__, "[ %s:%u%.32s ] Transfer encoding: %s", path->server->domain->domain, connection->server->port, path->path,
 									transfer_encoding);
 							if (strcasecmp(transfer_encoding, "chunked") == 0) {
 								chunked_encoding = 1;
 							} else {
 								/* Unsupported transfer encoding */
-								log_debug(__func__, "Bad Transfer-Encoding header. Assuming chunked encoding...");
+								hurl_debug(__func__, "Bad Transfer-Encoding header. Assuming chunked encoding...");
 								chunked_encoding = 1;
 							}
 						}
@@ -1387,14 +1389,14 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						free(value);
 
 					} else {
-						log_debug(__func__, "Header parsing error: '%s'", line);
+						hurl_debug(__func__, "Header parsing error: '%s'", line);
 						free(line);
 						free(*buffer);
 						*buffer = NULL;
 						*data_len = 0;
 						/* Get lock, update download state, release lock. */
 						pthread_mutex_lock(&manager->lock);
-						log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+						hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 						path->state = DOWNLOAD_STATE_ERROR;
 						pthread_mutex_unlock(&manager->lock);
 						return 0;
@@ -1413,24 +1415,24 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 				hurl_headers_free(headers);
 
 				if (*feature_persistence == SUPPORTED) {
-					log_debug(__func__, "[%s][%u] Persistent connection.", path->server->domain->domain, connection->server->port);
+					hurl_debug(__func__, "[%s][%u] Persistent connection.", path->server->domain->domain, connection->server->port);
 				} else {
-					log_debug(__func__, "[%s][%u] Non-persistent connection.", path->server->domain->domain, connection->server->port);
+					hurl_debug(__func__, "[%s][%u] Non-persistent connection.", path->server->domain->domain, connection->server->port);
 				}
 
 				/* Check response code for redirection. */
 				if (response_code >= 300 && response_code < 400) {
 					if (redirect_location != NULL) {
-						log_debug(__func__, "Redirect detected: %.64s", redirect_location);
+						hurl_debug(__func__, "Redirect detected: %.64s", redirect_location);
 						/* Create FULL redirection URL */
 						if (strncasecmp("http://", redirect_location, strlen("http://")) == 0
 								|| strncasecmp("https://", redirect_location, strlen("http://")) == 0) {
 							/* This is an absolute URL with */
-							log_debug(__func__, "Absolute redirection: '%s'", redirect_location);
+							hurl_debug(__func__, "Absolute redirection: '%s'", redirect_location);
 							redirect_url = strdup(redirect_location);
 						} else if (strncmp("//", redirect_location, 2) == 0) {
 							/* This is a protocol-independent URL */
-							log_debug(__func__, "Absolute protocol-less redirection: '%s'", redirect_location);
+							hurl_debug(__func__, "Absolute protocol-less redirection: '%s'", redirect_location);
 							redirect_url_len = strlen(redirect_location) + strlen("https://") + 1;
 							redirect_url = malloc(sizeof(char) * redirect_url_len);
 							if (path->server->tls) {
@@ -1452,7 +1454,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 							} else {
 								snprintf(redirect_url, redirect_url_len, "http://%s%s%s", path->server->domain->domain, extra_slash, redirect_location);
 							}
-							log_debug(__func__, "Relative redirection: '%s' => '%s'", redirect_location, redirect_url);
+							hurl_debug(__func__, "Relative redirection: '%s' => '%s'", redirect_location, redirect_url);
 						}
 
 						/* Hook point. Should redirect be followed? */
@@ -1462,7 +1464,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 							 * DO NOT ALLOW DUPLICATES! */
 
 							if (!(path_created = hurl_add_url(manager, 0, redirect_url, NULL))) {
-								log_debug(__func__, "Failed to add redirect to download queue.");
+								hurl_debug(__func__, "Failed to add redirect to download queue.");
 							} else {
 								/* The path was added, to fix tag */
 								path_created->tag = !manager->retag ? path->tag : manager->retag(path, redirect_url);
@@ -1472,11 +1474,11 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						free(redirect_location);
 
 					} else {
-						log_debug(__func__, "Redirect detected but location header is missing.");
+						hurl_debug(__func__, "Redirect detected but location header is missing.");
 					}
 
 				} else if (response_code < 100) {
-					log_debug(__func__, "Warning: Bad response code.");
+					hurl_debug(__func__, "Warning: Bad response code.");
 				}
 
 				/* Move eof_header past \r\n\r\n */
@@ -1488,7 +1490,8 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 			}
 
 			/* Update total number of bytes received. */
-			received += recv_len;
+			assert(recv_len >= 0);
+			received += (size_t) recv_len;
 
 			if (eof_header != NULL) {
 
@@ -1496,7 +1499,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 					/* Call receive hook */
 					if (manager->hook_body_recv != NULL) {
 
-						body_recv_len = header_len + recv_len > received ? received - header_len : recv_len;
+						body_recv_len = header_len + (size_t) recv_len > received ? received - header_len : (size_t) recv_len;
 						/* Check if body_recv_len exceeds content length of current response. */
 						if (hook_recv_body_offset + body_recv_len > content_len) {
 							body_recv_len = content_len - hook_recv_body_offset;
@@ -1504,7 +1507,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 
 						manager->hook_body_recv(path, *buffer + header_len + hook_recv_body_offset, body_recv_len);
 						hook_recv_body_offset += body_recv_len;
-						/* log_debug(__func__, "recv_len=%d, body_recv_len=%d", recv_len, body_recv_len); */
+						/* hurl_debug(__func__, "recv_len=%d, body_recv_len=%d", recv_len, body_recv_len); */
 					}
 				}
 
@@ -1516,23 +1519,21 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						manager->hook_transfer_complete(path, connection, header_len);
 					}
 
-					log_debug(__func__, "[ %s:%u%.32s ] Transfer complete: %d bytes received.", path->server->domain->domain, connection->server->port,
+					hurl_debug(__func__, "[ %s:%u%.32s ] Transfer complete: %d bytes received.", path->server->domain->domain, connection->server->port,
 							path->path, content_len);
 					/* Get lock, update download state, release lock. */
 					pthread_mutex_lock(&manager->lock);
-					log_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+					hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 					path->state = DOWNLOAD_STATE_COMPLETED;
 					pthread_mutex_unlock(&manager->lock);
-					log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+					hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 
 				} else if (chunked_encoding) {
 					/* Chunked transfer encoding. */
 					while (header_len + content_len + overhead < received) {
 						/* Get chunk size */
 						chunk_ptr = *buffer + header_len + content_len + overhead;
-
 						unprocessed_len = received - header_len - content_len - overhead;
-
 						k = 0;
 						bzero(chunk_len_hex, sizeof(chunk_len_hex));
 						chunk_len_hex[0] = '0';
@@ -1543,7 +1544,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 								break;
 							}
 							if (chunk_ptr[k] == '\r' && chunk_ptr[k + 1] == '\n') {
-								chunk_len_len = k;
+								chunk_len_len = (int)k;
 								break;
 							}
 							chunk_len_hex[2 + k] = chunk_ptr[k];
@@ -1552,15 +1553,15 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 
 						if (chunk_len_len == -1) {
 							/* The size of the next chunk cannot be read yet. */
-							log_debug(__func__, "Chunk header incomplete.");
+							hurl_debug(__func__, "Chunk header incomplete.");
 							break;
 						}
 
-						chunk_len = strtol(chunk_len_hex, NULL, 16);
-						/* log_debug(__func__, "Chunk str: %.2s => %d", chunk_ptr, chunk_len); */
+						chunk_len = (size_t) strtol(chunk_len_hex, NULL, 16);
+						/* hurl_debug(__func__, "Chunk str: %.2s => %d", chunk_ptr, chunk_len); */
 
 						/* Check if the entire chunk has been received. */
-						if (unprocessed_len - chunk_len_len - 2 - chunk_len < 0) {
+						if (unprocessed_len < (size_t) chunk_len_len + 2 + chunk_len) {
 							break;
 						}
 
@@ -1573,23 +1574,10 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 							manager->hook_body_recv(path, *buffer + header_len + content_len + overhead + chunk_len_len + 2, chunk_len);
 						}
 
-						if (chunk_len == 0) {
-							log_debug(__func__, "Chunk length is zero.");
-							log_debug(__func__, "Debug PATH:  %s", path->path);
-						} else if (chunk_len < 0) {
-							log_debug(__func__, "Chunk length is negative.");
-						}
-
 						/* Update content length */
 						content_len += chunk_len;
 						/* Update overhead */
-						overhead += (chunk_len_len + 2 + 2); /* Size of chunk length + '\r\n' + '\r\n' */
-
-						/*
-						 if (chunk_len == 0 && !isalnum((*buffer + header_len + overhead + content_len)[0])) {
-						 log_debug(__func__, "Funky chunk: '%.8s'", *buffer + header_len + overhead + content_len);
-						 }
-						 */
+						overhead += ((size_t) chunk_len_len + 2 + 2); /* Size of chunk length + '\r\n' + '\r\n' */
 
 						if (chunk_len == 0) {
 							transfer_complete = 1;
@@ -1599,7 +1587,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 							}
 
 							/* Download complete. */
-							log_debug(__func__, "[ %s:%u%.32s ] Transfer complete: %d bytes received.", path->server->domain->domain, connection->server->port,
+							hurl_debug(__func__, "[ %s:%u%.32s ] Transfer complete: %d bytes received.", path->server->domain->domain, connection->server->port,
 									path->path, content_len);
 
 							/* Update download state of path. */
@@ -1627,7 +1615,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						} else {
 							next_buffer_len = *data_len - header_len - content_len - overhead;
 						}
-						log_debug(__func__, "%u bytes left in buffer.", next_buffer_len);
+						hurl_debug(__func__, "%u bytes left in buffer.", next_buffer_len);
 						tmp = malloc(sizeof(char) * (next_buffer_len + 1));
 						memcpy(tmp, *buffer + header_len + content_len + overhead, next_buffer_len);
 						tmp[next_buffer_len] = '\0';
@@ -1636,11 +1624,11 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						free(*buffer);
 						*buffer = tmp;
 						/*
-						 log_debug(__func__, "BUFFER AFTER FIX", *buffer);
+						 hurl_debug(__func__, "BUFFER AFTER FIX", *buffer);
 						 printf("%s", *buffer); */
 						return 1;
 					} else {
-						log_debug(__func__, "Freeing buffer.");
+						hurl_debug(__func__, "Freeing buffer.");
 						free(*buffer);
 						*buffer = NULL;
 						*data_len = 0;
@@ -1651,7 +1639,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 			}
 		} else if (recv_len == 0) {
 			/* Connection closed prematurely by server. */
-			log_debug(__func__, "[ %s:%u%.32s ] Transfer failed. Connection closed by server.", path->server->domain->domain, connection->server->port,
+			hurl_debug(__func__, "[ %s:%u%.32s ] Transfer failed. Connection closed by server.", path->server->domain->domain, connection->server->port,
 					path->path);
 			*feature_persistence = UNSUPPORTED;
 			free(*buffer);
@@ -1661,7 +1649,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 			free(receive_buffer);
 		} else {
 			/* Transfer was NOT completed. */
-			log_debug(__func__, "[ %s:%u%.32s ] Transfer failed.", path->server->domain->domain, connection->server->port, path->path);
+			hurl_debug(__func__, "[ %s:%u%.32s ] Transfer failed.", path->server->domain->domain, connection->server->port, path->path);
 			/* Free receive buffer */
 			free(receive_buffer);
 		}
@@ -1673,7 +1661,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 	if (!connection->reused) {
 		/* Request was sent on a new connection. */
 		if (path->retries < path->server->domain->manager->max_retries) {
-			log_debug(__func__, "[ %s:%u%.32s ] Retrying download.", path->server->domain->domain, connection->server->port, path->path);
+			hurl_debug(__func__, "[ %s:%u%.32s ] Retrying download.", path->server->domain->domain, connection->server->port, path->path);
 			path->retries++;
 			path->state = DOWNLOAD_STATE_PENDING;
 		} else {
@@ -1681,12 +1669,12 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 		}
 	} else {
 		/* Request was sent on a reused connection. */
-		log_debug(__func__, "[ %s:%u%.32s ] Request failed on a reused connection. Retrying...", path->server->domain->domain, connection->server->port,
+		hurl_debug(__func__, "[ %s:%u%.32s ] Request failed on a reused connection. Retrying...", path->server->domain->domain, connection->server->port,
 				path->path);
 		path->state = DOWNLOAD_STATE_PENDING;
 	}
 	pthread_mutex_unlock(&manager->lock);
-	log_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
+	hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 
 	free(*buffer);
 	*buffer = NULL;
@@ -1709,14 +1697,14 @@ HURLPath *hurl_server_dequeue(HURLServer *server) {
 	}
 	/* All files have been processed or are currently being processed by other threads. */
 	if (path != NULL) {
-		log_debug(__func__, "Next item in queue: %s%.32s", path->server->domain->domain, path->path);
+		hurl_debug(__func__, "Next item in queue: %s%.32s", path->server->domain->domain, path->path);
 	} else {
-		log_debug(__func__, "Next item in queue: EMPTY");
+		hurl_debug(__func__, "Next item in queue: EMPTY");
 	}
 	return path;
 }
 
-int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
+ssize_t hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 	struct pollfd poll_sock;
 	int recv_len = -1;
 
@@ -1731,11 +1719,11 @@ int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 		switch (poll(&poll_sock, 1, (int) connection->server->domain->manager->recv_timeout)) {
 		case -1:
 			/* Poll failed. */
-			log_debug(__func__, "[ %s:%u ] Poll failed.", connection->server->domain->domain, connection->server->port);
+			hurl_debug(__func__, "[ %s:%u ] Poll failed.", connection->server->domain->domain, connection->server->port);
 			return -1;
 		case 0:
 			/* Poll timed out. */
-			log_debug(__func__, "[ %s:%u ] Connection timed out.", connection->server->domain->domain, connection->server->port);
+			hurl_debug(__func__, "[ %s:%u ] Connection timed out.", connection->server->domain->domain, connection->server->port);
 			return -1;
 		case 1:
 			/* The socket is ready to receive data. */
@@ -1745,10 +1733,10 @@ int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 					/* Secure connection. */
 					if ((recv_len = SSL_read(connection->ssl_handle, buffer, (int) buffer_len)) > 0) {
 						/* Return number of bytes received. */
-						/* log_debug(__func__, "[ %s:%u ] SSL read: %d", connection->server->domain->domain, connection->server->port, recv_len); */
+						/* hurl_debug(__func__, "[ %s:%u ] SSL read: %d", connection->server->domain->domain, connection->server->port, recv_len); */
 						return recv_len;
 					} else if (recv_len == 0) {
-						log_debug(__func__, "[ %s:%u ] The SSL connection was closed by the server.", connection->server->domain->domain,
+						hurl_debug(__func__, "[ %s:%u ] The SSL connection was closed by the server.", connection->server->domain->domain,
 								connection->server->port);
 						/* TODO: Is this the right state? */
 						connection->state = CONNECTION_STATE_CLOSED;
@@ -1757,10 +1745,10 @@ int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 						ssl_error = SSL_get_error(connection->ssl_handle, recv_len);
 						if (ssl_error != SSL_ERROR_WANT_READ) {
 							if (ssl_error == SSL_ERROR_SYSCALL) {
-								log_debug(__func__, "[ %s:%u ] SSL read error (syscall): %s", connection->server->domain->domain, connection->server->port,
+								hurl_debug(__func__, "[ %s:%u ] SSL read error (syscall): %s", connection->server->domain->domain, connection->server->port,
 										strerror(errno));
 							} else {
-								log_debug(__func__, "[ %s:%u ] SSL read error: %d", connection->server->domain->domain, connection->server->port, ssl_error);
+								hurl_debug(__func__, "[ %s:%u ] SSL read error: %d", connection->server->domain->domain, connection->server->port, ssl_error);
 								hurl_connection_close(connection, CONNECTION_STATE_ERROR); /* TODO: ERROR instead? */
 								return -1;
 							}
@@ -1774,11 +1762,11 @@ int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 						/* Return number of bytes received. */
 						return recv_len;
 					} else if (recv_len == 0) {
-						log_debug(__func__, "[ %s:%u ] The connection was closed by the server.", connection->server->domain->domain, connection->server->port);
+						hurl_debug(__func__, "[ %s:%u ] The connection was closed by the server.", connection->server->domain->domain, connection->server->port);
 						connection->state = CONNECTION_STATE_CLOSED;
 						return 0;
 					} else {
-						log_debug(__func__, "[ %s:%u ] recv() error: %s\n", connection->server->domain->domain, connection->server->port, strerror(errno));
+						hurl_debug(__func__, "[ %s:%u ] recv() error: %s\n", connection->server->domain->domain, connection->server->port, strerror(errno));
 						hurl_connection_close(connection, CONNECTION_STATE_ERROR); /* TODO: ERROR instead? */
 						return -1;
 					}
@@ -1786,12 +1774,12 @@ int hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 			}
 		}
 	}
-	return -1;
 }
 
-int hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len) {
+ssize_t hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len) {
 	struct pollfd poll_sock;
-	size_t data_sent = 0, send_len;
+	size_t data_sent = 0;
+	ssize_t send_len;
 	bzero(&poll_sock, sizeof(struct pollfd));
 	poll_sock.fd = connection->sock;
 	poll_sock.events = POLLOUT;
@@ -1799,11 +1787,11 @@ int hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len) {
 		switch (poll(&poll_sock, 1, connection->server->domain->manager->send_timeout)) {
 		case -1:
 			/* Poll failed. */
-			log_debug(__func__, "[ %s:%u ] Poll failed.", connection->server->domain->domain, connection->server->port);
+			hurl_debug(__func__, "[ %s:%u ] Poll failed.", connection->server->domain->domain, connection->server->port);
 			return -1;
 		case 0:
 			/* Poll timed out. */
-			log_debug(__func__, "[ %s:%u ] Connection timed out.", connection->server->domain->domain, connection->server->port);
+			hurl_debug(__func__, "[ %s:%u ] Connection timed out.", connection->server->domain->domain, connection->server->port);
 			return -1;
 		case 1:
 			if (poll_sock.revents & POLLOUT) {
@@ -1811,11 +1799,11 @@ int hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len) {
 				if (connection->server->tls) {
 					/* This is a secure connection. */
 #ifndef HURL_NO_SSL
-					if ((send_len = SSL_write(connection->ssl_handle, buffer, buffer_len)) > 0) {
-						log_debug(__func__, "[ %s:%u ] SSL write: %d", connection->server->domain->domain, connection->server->port, send_len);
-						data_sent += send_len;
+					if ((send_len = SSL_write(connection->ssl_handle, buffer, (int) buffer_len)) > 0) {
+						hurl_debug(__func__, "[ %s:%u ] SSL write: %d", connection->server->domain->domain, connection->server->port, send_len);
+						data_sent += (size_t) send_len;
 					} else {
-						log_debug(__func__, "[ %s:%u ] Failed to send.", connection->server->domain->domain, connection->server->port);
+						hurl_debug(__func__, "[ %s:%u ] Failed to send.", connection->server->domain->domain, connection->server->port);
 						hurl_connection_close(connection, CONNECTION_STATE_ERROR);
 						return -1;
 					}
@@ -1825,18 +1813,18 @@ int hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len) {
 					/* This is a normal connection. */
 					if ((send_len = send(connection->sock, buffer + data_sent, buffer_len - data_sent, MSG_NOSIGNAL)) <= 0) {
 						/* Send failed. */
-						log_debug(__func__, "[ %s:%u ] Failed to send.", connection->server->domain->domain, connection->server->port);
+						hurl_debug(__func__, "[ %s:%u ] Failed to send.", connection->server->domain->domain, connection->server->port);
 						hurl_connection_close(connection, CONNECTION_STATE_ERROR);
 						return -1;
 					} else {
 						/* Update data left to send. */
-						data_sent += send_len;
+						data_sent += (size_t) send_len;
 					}
 				}
 			}
 		}
 	}
-	return data_sent;
+	return (ssize_t) data_sent;
 }
 
 #ifndef HURL_NO_SSL
@@ -1847,31 +1835,11 @@ int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain) {
 	int i = 0, verifications = 0;
 	int wildcard = 0;
 
-	/* log_debug(__func__, "Checking SSL scope: '%s' vs. '%s'", expected_domain, actual_domain); */
+	/* hurl_debug(__func__, "Checking SSL scope: '%s' vs. '%s'", expected_domain, actual_domain); */
 
 	memset(expected_labels, 0, sizeof(char *) * 127);
 	memset(actual_labels, 0, sizeof(char *) * 127);
-	/*
-	 expected_copy = hurl_allocstrcpy(expected_domain, strlen(expected_domain), 1);
-	 str = expected_copy;
-	 while ((label = strtok(str, ".")) != NULL) {
-	 expected_labels[i] = label;
-	 str = NULL;
-	 i++;
-	 }
-	 */
 	nrof_expected_labels = split_domain_name(expected_domain, expected_labels);
-
-	/*
-	 actual_copy = hurl_allocstrcpy(actual_domain, strlen(actual_domain), 1);
-	 str = actual_copy;
-	 i = 0;
-	 while ((label = strtok(str, ".")) != NULL) {
-	 actual_labels[i] = label;
-	 str = NULL;
-	 i++;
-	 }
-	 */
 	nrof_actual_labels = split_domain_name(actual_domain, actual_labels);
 
 	/* Compare labels. */
@@ -1884,7 +1852,7 @@ int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain) {
 
 		} else if (i < nrof_actual_labels) {
 			actual_label = actual_labels[nrof_actual_labels - i - 1];
-			/* log_debug(__func__, "%s <=> %s", expected_label, actual_label); */
+			/* hurl_debug(__func__, "%s <=> %s", expected_label, actual_label); */
 			/* Check for wildcards. */
 			if (strcmp(actual_label, "*") == 0 && i == nrof_actual_labels - 1) {
 				/* The certificate contains a wildcard. */
@@ -2073,15 +2041,15 @@ int hurl_header_split_line(char *line, size_t line_len, char **key, char **value
 	if (bgof_value) {
 		if (value_len == -1) {
 			/* Line terminator is missing */
-			value_len = (int)line_len - bgof_value;
+			value_len = (int) line_len - bgof_value;
 		}
-		if ((*value = hurl_allocstrcpy(line + bgof_value, (size_t)value_len, 1)) == NULL) {
+		if ((*value = hurl_allocstrcpy(line + bgof_value, (size_t) value_len, 1)) == NULL) {
 			free(*key);
 			*key = NULL;
 			*value = NULL;
 			return 0;
 		} else {
-			/* log_debug(__func__, "HEADER: %s => %s", *key, *value); */
+			/* hurl_debug(__func__, "HEADER: %s => %s", *key, *value); */
 			return 1;
 		}
 	}
@@ -2096,7 +2064,7 @@ void hurl_print_status(HURLManager *manager, FILE *fp) {
 	int pipeline_errors = 0;
 	int completed = 0, failed = 0, pending = 0, total = 0;
 	char *url;
-	unsigned int url_len;
+	size_t url_len;
 	pthread_mutex_lock(&manager->lock);
 	domain = manager->domains;
 	while (domain != NULL) {
