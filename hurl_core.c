@@ -2146,6 +2146,7 @@ void hurl_manager_free(HURLManager *manager) {
 	ERR_free_strings();
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
+	sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
 #endif
 }
 
@@ -2157,6 +2158,11 @@ void hurl_domain_free(HURLManager *manager, HURLDomain *domain) {
 		hurl_server_free(manager, server);
 		server = next;
 	}
+	for (unsigned int i = 0; i < domain->nrof_addresses; i++) {
+		free(domain->addresses[i]);
+	}
+	free(domain->addresses);
+	free(domain->domain);
 	free(domain);
 }
 
