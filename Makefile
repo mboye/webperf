@@ -4,15 +4,15 @@ ifeq ($(UNAME_S),Darwin)
         CCFLAGS += -Wno-deprecated-declarations
 endif
 
-#COMPILER=/usr/bin/gcc -std=gnu99 -pedantic -Wall $(CCFLAGS)
-COMPILER=/usr/bin/clang -std=gnu99 -pedantic -Wall -Weverything $(CCFLAGS)
+COMPILER=/usr/bin/gcc -std=gnu99 -pedantic -Wall $(CCFLAGS)
+#COMPILER=/usr/bin/clang -std=gnu99 -pedantic -Wall -Weverything $(CCFLAGS)
 
 all: release
 
 release: hurl_core.c hurl_parse.c hurl_core.h 
-	$(COMPILER) -Os -shared -fPIC -o libhurl.so *.c -lm -pthread -lssl -lcrypto
+	$(COMPILER) -Os -shared -fPIC -o libhurl.so *.c -lm -pthread -lssl -lcrypto -DNDEBUG
 
-debug: 	hurl_core.c hurl_parse.c hurl_core.h 
+debug: hurl_core.c hurl_parse.c hurl_core.h 
 	$(COMPILER) -g3 -shared -fPIC -o libhurl.so *.c -lm -pthread -lssl -lcrypto
 
 release-static: hurl_core.c hurl_parse.c hurl_core.h

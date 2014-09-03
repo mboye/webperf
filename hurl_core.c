@@ -26,7 +26,7 @@
 #include <openssl/x509v3.h>
 #endif
 
-void *hurl_domain_exec(void *domain_ptr);
+
 void *hurl_connection_exec(void *connection_ptr);
 HURLPath *hurl_server_dequeue(HURLServer *server);
 int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, unsigned long *buffer_len, unsigned long *data_len,
@@ -46,33 +46,6 @@ void hurl_connection_close(HURLConnection *connection, enum HURLConnectionState 
 int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain);
 unsigned char split_domain_name(char *name, char *labels[]);
 int hurl_parse_response_code(char *line, char **code_text);
-
-#define timeval_to_msec(t) (float)((t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3)
-
-void hurl_debug(const char *func, const char *msg, ...) {
-#ifndef NDEBUG
-	char template[1024];
-	va_list args;
-	snprintf(template, sizeof template, "[%u] %s(): %s\n", (unsigned int)pthread_self(), func, msg);
-	va_start(args, msg);
-	vfprintf(stderr, template, args);
-	va_end(args);
-	fflush(stderr);
-#endif
-}
-
-char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding) {
-	char *newstr;
-	if (str != NULL) {
-		if ((newstr = calloc(str_len + alloc_padding, sizeof(char))) == NULL) {
-			exit(EXIT_FAILURE);
-		}
-		memcpy(newstr, str, str_len);
-		return newstr;
-	} else {
-		return NULL;
-	}
-}
 
 HURLManager *hurl_manager_init() {
 	HURLManager *manager;
@@ -105,6 +78,31 @@ HURLManager *hurl_manager_init() {
 		manager->ca_file = NULL;
 #endif
 		return manager;
+	} else {
+		return NULL;
+	}
+}
+
+void hurl_debug(const char *func, const char *msg, ...) {
+#ifndef NDEBUG
+	char template[1024];
+	va_list args;
+	snprintf(template, sizeof template, "[%u] %s(): %s\n", (unsigned int)pthread_self(), func, msg);
+	va_start(args, msg);
+	vfprintf(stderr, template, args);
+	va_end(args);
+	fflush(stderr);
+#endif
+}
+
+char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding) {
+	char *newstr;
+	if (str != NULL) {
+		if ((newstr = calloc(str_len + alloc_padding, sizeof(char))) == NULL) {
+			exit(EXIT_FAILURE);
+		}
+		memcpy(newstr, str, str_len);
+		return newstr;
 	} else {
 		return NULL;
 	}
@@ -1516,7 +1514,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 					transfer_complete = 1;
 
 					if (manager->hook_transfer_complete != NULL) {
-						manager->hook_transfer_complete(path, connection, header_len);
+						manager->hook_transfer_complete(path, connection, content_len, header_len);
 					}
 
 					hurl_debug(__func__, "[ %s:%u%.32s ] Transfer complete: %d bytes received.", path->server->domain->domain, connection->server->port,
@@ -1583,7 +1581,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 							transfer_complete = 1;
 							/* Call hook */
 							if (manager->hook_transfer_complete != NULL) {
-								manager->hook_transfer_complete(path, connection, header_len + overhead);
+								manager->hook_transfer_complete(path, connection, content_len, header_len + overhead);
 							}
 
 							/* Download complete. */

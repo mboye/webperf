@@ -153,7 +153,7 @@ struct hurl_manager {
 	void (*hook_header_recv)(HURLPath *, char *, size_t); /* Hook after entire header has been received. */
 	int (*hook_redirect)(HURLPath *, int, char *);
 	void (*hook_response_code)(HURLPath *, HURLConnection *, int, char *); /* Hook after HTTP response code has been found. */
-	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, size_t); /* Hook at end of transfer when using pipelining */
+	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, size_t, size_t); /* Hook at end of transfer when using pipelining */
 	void (*hook_request_sent)(HURLPath *, HURLConnection *); /* Hook after HTTP request has been sent. */
 	void *(*retag)(HURLPath *, char *); /* Create new tag for element in case of redirections. */
 	void (*free_tag)(void *tag); /* Frees tag structure */
@@ -181,6 +181,8 @@ struct hurl_pipeline_queue {
 	HURLPipelineQueue *previous, *next;
 };
 
+HURLManager *hurl_manager_init();
+
 int hurl_parse_url(char *url, HURLParsedURL **result);
 void hurl_parsed_url_free(HURLParsedURL *url);
 
@@ -197,11 +199,6 @@ void hurl_headers_free(HURLHeader *headers);
 int hurl_header_split_line(char *line, size_t line_len, char **key, char **value);
 int hurl_header_exists(HURLHeader *headers, char *key);
 
-#ifndef __cplusplus
-int strcasecmp(const char *s1, const char *s2);
-#endif
-
-HURLManager *hurl_manager_init();
 void hurl_manager_free(HURLManager *manager);
 void hurl_domain_free(HURLManager *manager, HURLDomain *domain);
 void hurl_server_free(HURLManager *manager, HURLServer *server);
@@ -211,7 +208,11 @@ void hurl_connection_free(HURLConnection *connection);
 int hurl_domain_nrof_paths(HURLDomain *domain, enum HURLDownloadState state);
 int hurl_nrof_paths(HURLManager *manager, enum HURLDownloadState state);
 
-//char *allocstrcpy(char *str, unsigned int str_len, unsigned int alloc_padding);
 char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
+
+/* Advanced internal functions */
+void *hurl_domain_exec(void *domain_ptr);
+
+#define timeval_to_msec(t) (float)((t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3)
 
 #endif /* HURL_CORE_H_ */
