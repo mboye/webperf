@@ -1237,7 +1237,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 	size_t received = 0;
 	size_t content_len = 0;
 	size_t hook_recv_body_offset = 0;
-	char *content_type;
+	char *content_type = NULL;
 	char *bgof_value;
 	char *tmp;
 	size_t next_buffer_len;
@@ -1468,8 +1468,6 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 								path_created->tag = !manager->retag ? path->tag : manager->retag(path, redirect_url);
 							}
 						}
-						free(redirect_url);
-						free(redirect_location);
 
 					} else {
 						hurl_debug(__func__, "Redirect detected but location header is missing.");
@@ -1485,6 +1483,12 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 				if (chunked_encoding) {
 					chunk_ptr = eof_header;
 				}
+
+				/* release memory allocated above */
+				free(redirect_url);
+				free(redirect_location);
+				free(content_type);
+				free(transfer_encoding);
 			}
 
 			/* Update total number of bytes received. */
@@ -2132,6 +2136,17 @@ void hurl_manager_free(HURLManager *manager) {
 	free(manager->ca_path);
 	hurl_headers_free(manager->headers);
 	free(manager);
+
+	/* free OpenSSL stuff */
+	/* ref: http://stackoverflow.com/questions/11759725/opensslssl-library-init-memory-leak */
+#ifndef HURL_NO_SSL
+	CONF_modules_free();
+	ERR_remove_state(0);
+	CONF_modules_unload(1);
+	ERR_free_strings();
+	EVP_cleanup();
+	CRYPTO_cleanup_all_ex_data();
+#endif
 }
 
 void hurl_domain_free(HURLManager *manager, HURLDomain *domain) {
