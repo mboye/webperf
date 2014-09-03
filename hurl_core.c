@@ -1772,6 +1772,7 @@ ssize_t hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 			}
 		}
 	}
+	return -1;
 }
 
 ssize_t hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len) {
