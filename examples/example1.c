@@ -54,9 +54,13 @@ int main(int argc, char *argv[]) {
 	if (t->response_code == 200 && t->completed) {
 		timersub(&t->end_transfer, &t->begin_transfer, &transfer_time);
 		printf("Successfully transferred %lu bytes in %f ms.\n", t->content_length, timeval_to_msec(&transfer_time));
+		hurl_manager_free(manager);
+		free(t);
 		exit(EXIT_SUCCESS);
 	} else {
 		printf("The transfer failed with response code %d.\n", t->response_code);
+		hurl_manager_free(manager);
+		free(t);
 		exit(EXIT_FAILURE);
 	}
 }
