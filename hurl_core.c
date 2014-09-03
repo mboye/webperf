@@ -2146,6 +2146,7 @@ void hurl_manager_free(HURLManager *manager) {
 	ERR_free_strings();
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
+	// compression_methods has one haunting leak, don't know how to fix it
 	sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
 #endif
 }
