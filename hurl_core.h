@@ -15,12 +15,11 @@
 # endif
 #endif
 
-#define HURL_MAX_CONNECTIONS 16
-#define HURL_MAX_DOMAIN_CONNECTIONS 6
-#define HURL_MAX_PIPELINE_REQUESTS 3
-#define HURL_KEEP_ALIVE 60 /* 60 seconds */
-#define HURL_MAX_RETRIES 0
-#define HURL_TIMEOUT 5000 /* 5 seconds */
+#define HURL_MAX_CONNECTIONS 16 /* Overall connection limit. */
+#define HURL_MAX_DOMAIN_CONNECTIONS 6 /* Connection limit per domain name. */
+#define HURL_MAX_PIPELINE_REQUESTS 3 /* Maximum number of consecutive HTTP requests to send. */
+#define HURL_MAX_RETRIES 0 /* Number of download retries. */
+#define HURL_TIMEOUT 5000 /* Default timeout in ms. */
 #define HURL_CA_PATH "/etc/ssl/certs/"
 
 typedef struct hurl_manager HURLManager;
@@ -31,6 +30,7 @@ typedef struct hurl_connection HURLConnection;
 typedef struct hurl_parsed_url HURLParsedURL;
 typedef struct hurl_pipeline_queue HURLPipelineQueue;
 typedef struct hurl_header HURLHeader;
+
 
 enum HTTPFeatureSupport {
 	SUPPORTED, UNSUPPORTED, UNKNOWN_SUPPORT
@@ -57,6 +57,15 @@ enum HURLConnectResult {
 	CONNECTION_ERROR = 0, CONNECTION_NEW = 1, CONNECTION_REUSED = 2
 };
 
+
+/* Hierarchical structure of hurl:
+ * HURLManager
+ *  |-->HURLDomain
+ *       |--> HURLServer
+ *             |--> HURLPath
+ */
+
+/* Structure representing a domain name. */
 struct hurl_domain {
 	HURLManager *manager; /* Reverse pointer to manager. */
 	HURLDomain *previous, *next; /* Linked list pointers. */
@@ -78,8 +87,9 @@ struct hurl_domain {
 	float resolution_time; /* How long did the resolution process take? */
 };
 
+/* Structure representing a server. */
 struct hurl_server {
-	HURLDomain *domain;
+	HURLDomain *domain; /* Reverse pointer to domain. */
 	HURLServer *previous, *next; /* Linked list pointers. */
 	unsigned short port; /* Server port number. */
 	int tls; /* Connection should use TLS. */
@@ -87,11 +97,11 @@ struct hurl_server {
 	unsigned int nrof_paths; /* Number of files to be downloaded from domain. */
 	HURLConnection *connections; /* Connection structures. */
 	unsigned int max_connections; /* Maximum number of connections to this server. */
-	/*pthread_t thread; */
 	enum HURLServerState state; /* Server state. */
 	unsigned int pipeline_errors; /* Number of times pipelined requests failed. */
 };
 
+/* Structure representing a path of a server. */
 struct hurl_path {
 	char *path; /* Path of file e.g. /index.html */
 	HURLServer *server; /* Reverse pointer to domain structure. */
@@ -103,28 +113,31 @@ struct hurl_path {
 	struct timeval response_received; /* When was the response to the GET request received. */
 };
 
+/* Structure representing a TCP connection to a server. */
 struct hurl_connection {
-	HURLServer *server;
+	HURLServer *server; /* Reverse pointer to server. */
 	int sock; /* Socket number of connection. */
 #ifndef HURL_NO_SSL
 	SSL *ssl_handle; /* SSL handle. */
 	SSL_CTX *ssl_context; /* SSL context. */
 #endif
 	enum HURLConnectionState state; /* State of socket. */
-	unsigned long data_tx, data_rx; /* Bytes sent and received. *//* TODO Record these stats */
-	unsigned int request_tx;
+	unsigned long data_tx, data_rx; /* TODO: Bytes sent and received. */
+	unsigned int request_tx; /* TODO: Number of requests sent on connection. */
 	HURLConnection *previous, *next; /* Linked list pointers. */
-	pthread_t thread;
-	float connect_time, connect_time_ssl;
-	struct timeval begin_connect;
-	int reused;
+	pthread_t thread; /* Connection thread. */
+	float connect_time, connect_time_ssl; /* Time to establish TCP+SSL connection and just SSL connection. */
+	struct timeval begin_connect; /* Time when connect() was called. */
+	int reused; /* Was the connection reused? */
 };
 
+/* Structure representing a HTTP header. */
 struct hurl_header {
 	char *key, *value;
 	HURLHeader *previous, *next;
 };
 
+/* Root structure of hurl. */
 struct hurl_manager {
 	float http_version;
 	enum HTTPFeatureSupport feature_tls; /* Als download files using TLS. */
@@ -160,7 +173,7 @@ struct hurl_manager {
 	unsigned int recv_buffer_len; /* Size of receive buffer. */
 	pthread_mutex_t lock; /* Mutex for connections variable. */
 	pthread_cond_t condition; /* Condition for connections variable. */
-	HURLHeader *headers;
+	HURLHeader *headers; /* Linked list of headers to include in HTTP requests. */
 	struct timeval bgof_exec; /* When did the download process begin? */
 	float exec_time; /* When did the download process begin? */
 #ifndef HURL_NO_SSL
@@ -169,18 +182,20 @@ struct hurl_manager {
 #endif
 };
 
+/* Structure representing a parsed URL. */
 struct hurl_parsed_url {
-	char *protocol;
-	char *hostname;
-	unsigned short port;
-	char *path;
+	char *protocol; /* Protocol e.g. http, https */
+	char *hostname; /* Host/domain name */
+	unsigned short port; /* Server port. Default is port 80 for HTTP and 443 for HTTPS */
+	char *path; /* Path e.g. /index.html */
 };
 
+/* Structure used to create pipelining queue. */
 struct hurl_pipeline_queue {
 	HURLPath *path;
 	HURLPipelineQueue *previous, *next;
 };
-
+/* Initializes hurl with default values. */
 HURLManager *hurl_manager_init();
 
 int hurl_parse_url(char *url, HURLParsedURL **result);
@@ -213,6 +228,7 @@ char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
 /* Advanced internal functions */
 void *hurl_domain_exec(void *domain_ptr);
 
+/* Macro functions */
 #ifndef timeval_to_msec
 #define timeval_to_msec(t) (float)((t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3)
 #endif
