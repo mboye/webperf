@@ -1199,7 +1199,7 @@ unsigned char split_domain_name(char *name, char *labels[]) {
 }
 
 int hurl_parse_response_code(char *line, char **code_text) {
-	int response_code;
+	long response_code;
 	char *str, *copy, *part, *eof_part;
 	char *split_str_ptr = NULL;
 	int offset = 0;
