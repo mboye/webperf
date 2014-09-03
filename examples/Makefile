@@ -18,7 +18,7 @@ libhurl-debug: FORCE
 example1: example1.c
 	$(COMPILER) -o example1 example1.c -lhurl -I".." -L".."
 	@echo
-	@echo "How to run example: LD_LIBRARY_PATH=.. ./example1"
+	@echo "How to run example: LD_LIBRARY_PATH=.. ./example1 <URL>"
 	@echo
 
 clean: FORCE
