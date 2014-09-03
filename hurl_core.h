@@ -213,6 +213,8 @@ char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
 /* Advanced internal functions */
 void *hurl_domain_exec(void *domain_ptr);
 
+#ifndef timeval_to_msec
 #define timeval_to_msec(t) (float)((t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3)
+#endif
 
 #endif /* HURL_CORE_H_ */
