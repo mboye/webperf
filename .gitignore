@@ -21,6 +21,7 @@
 *.i*86
 *.x86_64
 *.hex
+examples/example1
 
 #Eclipse
 /debug

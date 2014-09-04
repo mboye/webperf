@@ -18,6 +18,7 @@
 #define HURL_MAX_CONNECTIONS 16 /* Overall connection limit. */
 #define HURL_MAX_DOMAIN_CONNECTIONS 6 /* Connection limit per domain name. */
 #define HURL_MAX_PIPELINE_REQUESTS 3 /* Maximum number of consecutive HTTP requests to send. */
+#define HURL_KEEP_ALIVE 60 /* 60 seconds */
 #define HURL_MAX_RETRIES 0 /* Number of download retries. */
 #define HURL_TIMEOUT 5000 /* Default timeout in ms. */
 #define HURL_CA_PATH "/etc/ssl/certs/"
