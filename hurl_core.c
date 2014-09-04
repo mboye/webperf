@@ -26,7 +26,6 @@
 #include <openssl/x509v3.h>
 #endif
 
-
 void *hurl_connection_exec(void *connection_ptr);
 HURLPath *hurl_server_dequeue(HURLServer *server);
 int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, unsigned long *buffer_len, unsigned long *data_len,
@@ -58,7 +57,7 @@ HURLManager *hurl_manager_init() {
 		manager->max_connections = HURL_MAX_CONNECTIONS;
 		manager->max_domain_connections = HURL_MAX_DOMAIN_CONNECTIONS;
 		manager->max_pipeline = HURL_MAX_PIPELINE_REQUESTS;
-		manager->keep_alive = HURL_KEEP_ALIVE;
+		manager->keep_alive = HURL_KEEP_ALIVE; /* Keep-alive is currently not supported. */
 		manager->max_retries = HURL_MAX_RETRIES;
 		manager->connect_timeout = HURL_TIMEOUT;
 		manager->send_timeout = HURL_TIMEOUT;
@@ -87,7 +86,7 @@ void hurl_debug(const char *func, const char *msg, ...) {
 #ifndef NDEBUG
 	char template[1024];
 	va_list args;
-	snprintf(template, sizeof template, "[%u] %s(): %s\n", (unsigned int)pthread_self(), func, msg);
+	snprintf(template, sizeof template, "[%u] %s(): %s\n", (unsigned int) pthread_self(), func, msg);
 	va_start(args, msg);
 	vfprintf(stderr, template, args);
 	va_end(args);
@@ -1546,7 +1545,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 								break;
 							}
 							if (chunk_ptr[k] == '\r' && chunk_ptr[k + 1] == '\n') {
-								chunk_len_len = (int)k;
+								chunk_len_len = (int) k;
 								break;
 							}
 							chunk_len_hex[2 + k] = chunk_ptr[k];
@@ -1764,7 +1763,8 @@ ssize_t hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len) {
 						/* Return number of bytes received. */
 						return recv_len;
 					} else if (recv_len == 0) {
-						hurl_debug(__func__, "[ %s:%u ] The connection was closed by the server.", connection->server->domain->domain, connection->server->port);
+						hurl_debug(__func__, "[ %s:%u ] The connection was closed by the server.", connection->server->domain->domain,
+								connection->server->port);
 						connection->state = CONNECTION_STATE_CLOSED;
 						return 0;
 					} else {
@@ -2146,20 +2146,21 @@ void hurl_manager_free(HURLManager *manager) {
 	ERR_free_strings();
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
-	// compression_methods has one haunting leak, don't know how to fix it
+	/* compression_methods has one haunting leak, don't know how to fix it */
 	sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
 #endif
 }
 
 void hurl_domain_free(HURLManager *manager, HURLDomain *domain) {
 	HURLServer *next, *server;
+	unsigned int i;
 	server = domain->servers;
 	while (server != NULL) {
 		next = server->next;
 		hurl_server_free(manager, server);
 		server = next;
 	}
-	for (unsigned int i = 0; i < domain->nrof_addresses; i++) {
+	for (i = 0; i < domain->nrof_addresses; i++) {
 		free(domain->addresses[i]);
 	}
 	free(domain->addresses);
@@ -2169,7 +2170,6 @@ void hurl_domain_free(HURLManager *manager, HURLDomain *domain) {
 
 void hurl_server_free(HURLManager *manager, HURLServer *server) {
 	HURLPath *next, *path;
-
 	path = server->paths;
 	while (path != NULL) {
 		next = path->next;
@@ -2177,7 +2177,6 @@ void hurl_server_free(HURLManager *manager, HURLServer *server) {
 		path = next;
 	}
 	free(server);
-
 }
 
 void hurl_connection_free(HURLConnection *connection) {
