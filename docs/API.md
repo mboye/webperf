@@ -144,10 +144,53 @@ void hurl_headers_free(HURLHeader *bgof_headers);
 ```
 hurl_headers_free(manager->headers);
 ```
-
+Find header
+---
+Splits a HTTP header line into key and value.
+```
 int hurl_header_split_line(char *line, size_t line_len, char **key, char **value);
+```
+**Example**
+```
+char *key, *value, line[64];
+snprintf(line, sizeof(line), "Content-Type: text/html");
+if(hurl_header_split_line(line, strlen(line), &key, &value)) {
+	printf("Header line parsed; key=%s value=%s\n", key, value);
+} else {
+	printf("Failed to parse header line.\n");
+}
+```
+Find header
+---
+Checks whether a certain HTTP header exists in a linked list of [HURLHeader](#HURLHeader) structures.
+Keys are **not** case sensitive.
+```
 int hurl_header_exists(HURLHeader *headers, char *key);
+```
+**Example**
+```
+if(hurl_header_exists(manager->header, "Cache-Control")) {
+	printf("The header exists.\n");
+} else {
+	printf("The header does NOT exist.\n");
+}
+```
+Free HURL manager
+---
+Frees memory used by [HURLManager](#HURLManager) structure.
+```
 void hurl_manager_free(HURLManager *manager);
+```
+**Example**
+```
+/* Initialize HURL manager */
+HURLManager *manager = hurl_manager_init();
+/* Use HURL ... */
+...
+/* Free memory when done. */
+hurl_manager_free(manager);
+```
+
 void hurl_domain_free(HURLManager *manager, HURLDomain *domain);
 void hurl_server_free(HURLManager *manager, HURLServer *server);
 void hurl_path_free(HURLManager *manager, HURLPath *path);
