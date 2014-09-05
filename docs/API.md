@@ -2,25 +2,50 @@
 hurl_core.h
 ===
 
-Initialize hurl manager
+Initialize hurl
+---
 ```
 HURLManager *hurl_manager_init();
 ```
-Example
+**Example**
 ```
-HURLManager *hurl_manager_init();
+HURLManager *manager = hurl_manager_init();
 ```
 
 Find domain
+---
 ```
-Prototype:
 	HURLDomain *hurl_get_domain(HURLManager *manager, char *domain);
-Example:
+```
+**Example**
+```
 	HURLDomain *domain = hurl_get_domain(manager, "www.google.com");
 ```
 
-
+Add URL to be downloaded
+---
+```
 HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, void *tag);
+```
+**Example 1**
+```C
+/* Create tag */
+char *tag = malloc(sizeof(char)*6);
+snprintf(tag, 6, "hello");
+/* Allow duplicates. */
+hurl_add_url(manager, 1, "http://www.github.com/", tag);
+```
+**Example 2**
+```C
+/* Don't allow duplicates and postpone tagging. */
+HURLPath *path = hurl_add_url(manager, 0, "http://www.github.com/", NULL);
+if(path != NULL) {
+	/* The URL was added. */
+	path->tag = tag;
+} else {
+	/* The tag was not added. */
+}
+```
 int hurl_exec(HURLManager *manager);
 int hurl_parse_url(char *url, HURLParsedURL **result);
 void hurl_parsed_url_free(HURLParsedURL *url);
