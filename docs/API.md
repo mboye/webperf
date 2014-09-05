@@ -64,7 +64,7 @@ if(hurl_parse_url("http://www.github.com/", &parsed_url)) {
 	/* Parsing ERROR */
 }
 ```
-Parse URL
+Free parsed URL structure
 ---
 Frees the data structure of a parsed URL.
 ```C
