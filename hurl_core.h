@@ -206,7 +206,7 @@ HURLDomain *hurl_get_domain(HURLManager *manager, char *domain);
 HURLServer *hurl_get_server(HURLDomain *domain, unsigned short port, int tls);
 int hurl_header_add(HURLHeader **headers, char *key, char *value);
 char *hurl_header_get(HURLHeader *headers, char *key);
-void hurl_headers_free(HURLHeader *headers);
+void hurl_headers_free(HURLHeader *bgof_headers);
 int hurl_header_split_line(char *line, size_t line_len, char **key, char **value);
 int hurl_header_exists(HURLHeader *headers, char *key);
 void hurl_manager_free(HURLManager *manager);

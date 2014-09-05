@@ -2,7 +2,7 @@
 hurl_core.h
 ===
 
-Initialize hurl
+Initialize HURL manager
 ---
 ```
 HURLManager *hurl_manager_init();
@@ -10,16 +10,6 @@ HURLManager *hurl_manager_init();
 **Example**
 ```
 HURLManager *manager = hurl_manager_init();
-```
-
-Find domain
----
-```
-	HURLDomain *hurl_get_domain(HURLManager *manager, char *domain);
-```
-**Example**
-```
-	HURLDomain *domain = hurl_get_domain(manager, "www.google.com");
 ```
 
 Add URL to be downloaded
@@ -46,14 +36,115 @@ if(path != NULL) {
 	/* The tag was not added. */
 }
 ```
+Execute HURL
+---
+```C
 int hurl_exec(HURLManager *manager);
+```
+**Example**
+```C
+if(hurl_exec(manager) == 1) {
+	/* OK */
+} else {
+	/* ERROR */
+}
+```
+Parse URL
+---
+Parses a URL string into protocol, hostname, port, and path.
+```C
 int hurl_parse_url(char *url, HURLParsedURL **result);
+```
+**Example**
+```C
+HURLParsedURL *parsed_url;
+if(hurl_parse_url("http://www.github.com/", &parsed_url)) {
+	/* Parsing OK */
+} else {
+	/* Parsing ERROR */
+}
+```
+Parse URL
+---
+Frees the data structure of a parsed URL.
+```C
 void hurl_parsed_url_free(HURLParsedURL *url);
+```
+**Example**
+```C
+hurl_parsed_url_free(parsed_url);
+```
+Find domain
+---
+Find the [HURLDomain](#HURLDomain) structure of a domain name.
+```
 HURLDomain *hurl_get_domain(HURLManager *manager, char *domain);
+```
+**Example**
+```
+	HURLDomain *domain = hurl_get_domain(manager, "www.google.com");
+```
+Find server
+---
+Find the [HURLServer](#HURLServer) structure of a server.
+```
 HURLServer *hurl_get_server(HURLDomain *domain, unsigned short port, int tls);
+```
+**Example**
+```
+/* Find a server for www.github.com running on port 80 without TLS.  */
+HURLServer *server = hurl_get_server("www.github.com",80, 0);
+if(server) {
+	/* Server found. */
+} else {
+	/* Server not found. */
+}
+```
+Add header
+---
+Adds a header to a linked list of [HURLHeader](#HURLHeader) structures.
+If a header with the same key exists its value is overwritten.
+```
 int hurl_header_add(HURLHeader **headers, char *key, char *value);
+```
+**Example**
+```
+/* Find a server for www.github.com running on port 80 without TLS.  */
+if(hurl_header_add(manager->headers, "User-Agent", "hurl/x.yy")) {
+	printf("Header added.\n");
+} else {
+	printf("Header not added.\n");
+	/* TODO: Does this ever happen? */
+}
+```
+Find header
+---
+Finds a header in a linked list of [HURLHeader](#HURLHeader) structures and returns its value.
+Keys are **not** case sensitive and if the key is not found NULL is returned.
+```
 char *hurl_header_get(HURLHeader *headers, char *key);
-void hurl_headers_free(HURLHeader *headers);
+```
+**Example**
+```
+/* Find 'User-Agent' header  */
+char *header_value = hurl_header_get(manager->headers, "user-agent");
+if(header_value) {
+	printf("Header found: %s\n", header_value);
+} else {
+	printf("Header not found.\n");
+}
+```
+Find header
+---
+Frees all elements in a linked list of [HURLHeader](#HURLHeader) structures.
+```
+void hurl_headers_free(HURLHeader *bgof_headers);
+```
+**Example**
+```
+hurl_headers_free(manager->headers);
+```
+
 int hurl_header_split_line(char *line, size_t line_len, char **key, char **value);
 int hurl_header_exists(HURLHeader *headers, char *key);
 void hurl_manager_free(HURLManager *manager);

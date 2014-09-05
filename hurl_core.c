@@ -1958,8 +1958,8 @@ int hurl_header_str(HURLHeader *headers, char *buffer, size_t buffer_len) {
 	return (int) print_len;
 }
 
-void hurl_headers_free(HURLHeader *headers) {
-	HURLHeader *h = headers, *next;
+void hurl_headers_free(HURLHeader *bgof_headers) {
+	HURLHeader *h = bgof_headers, *next;
 	while (h != NULL) {
 		next = h->next;
 		free(h->key);
