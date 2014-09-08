@@ -32,7 +32,6 @@ typedef struct hurl_parsed_url HURLParsedURL;
 typedef struct hurl_pipeline_queue HURLPipelineQueue;
 typedef struct hurl_header HURLHeader;
 
-
 enum HTTPFeatureSupport {
 	SUPPORTED, UNSUPPORTED, UNKNOWN_SUPPORT
 };
@@ -42,7 +41,14 @@ enum HURLConnectionState {
 };
 
 enum HURLDownloadState {
-	DOWNLOAD_STATE_PENDING = 1, DOWNLOAD_STATE_IN_PROGRESS = 2, DOWNLOAD_STATE_COMPLETED = 4, DOWNLOAD_STATE_ERROR = 8
+	/* File has not yet been processed. */
+	DOWNLOAD_STATE_PENDING = 1,
+	/* File is currently being processed. */
+	DOWNLOAD_STATE_IN_PROGRESS = 2,
+	/* File has been downloaded successfuly. */
+	DOWNLOAD_STATE_COMPLETED = 4,
+	/* File was processed and download failed. */
+	DOWNLOAD_STATE_ERROR = 8
 };
 
 enum HURLDNSState {
@@ -57,7 +63,6 @@ enum HURLServerState {
 enum HURLConnectResult {
 	CONNECTION_ERROR = 0, CONNECTION_NEW = 1, CONNECTION_REUSED = 2
 };
-
 
 /* Hierarchical structure of hurl:
  * HURLManager

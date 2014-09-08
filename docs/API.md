@@ -134,7 +134,7 @@ if(header_value) {
 	printf("Header not found.\n");
 }
 ```
-Find header
+Free headers
 ---
 Frees all elements in a linked list of [HURLHeader](#HURLHeader) structures.
 ```
@@ -144,7 +144,7 @@ void hurl_headers_free(HURLHeader *bgof_headers);
 ```
 hurl_headers_free(manager->headers);
 ```
-Find header
+Split HTTP header line
 ---
 Splits a HTTP header line into key and value.
 ```
@@ -160,7 +160,7 @@ if(hurl_header_split_line(line, strlen(line), &key, &value)) {
 	printf("Failed to parse header line.\n");
 }
 ```
-Find header
+Does header exist?
 ---
 Checks whether a certain HTTP header exists in a linked list of [HURLHeader](#HURLHeader) structures.
 Keys are **not** case sensitive.
@@ -175,11 +175,16 @@ if(hurl_header_exists(manager->header, "Cache-Control")) {
 	printf("The header does NOT exist.\n");
 }
 ```
-Free HURL manager
+Free HURL structures
 ---
-Frees memory used by [HURLManager](#HURLManager) structure.
+The following functions are used to clean up memory used by HURL.
+Typically, only ```hurl_manager_free()``` is used as it cleans up everything.
 ```
 void hurl_manager_free(HURLManager *manager);
+void hurl_domain_free(HURLManager *manager, HURLDomain *domain);
+void hurl_server_free(HURLManager *manager, HURLServer *server);
+void hurl_path_free(HURLManager *manager, HURLPath *path);
+void hurl_connection_free(HURLConnection *connection);
 ```
 **Example**
 ```
@@ -190,14 +195,36 @@ HURLManager *manager = hurl_manager_init();
 /* Free memory when done. */
 hurl_manager_free(manager);
 ```
-
-void hurl_domain_free(HURLManager *manager, HURLDomain *domain);
-void hurl_server_free(HURLManager *manager, HURLServer *server);
-void hurl_path_free(HURLManager *manager, HURLPath *path);
-void hurl_connection_free(HURLConnection *connection);
+Count number of files associated with a domain name
+---
+Counts the number of [HURLPath](#HURLPath) structures under a [HURLDomain](#HURLDomain) structure.
+```
 int hurl_domain_nrof_paths(HURLDomain *domain, enum HURLDownloadState state);
+```
+**Example**
+```
+/* Initialize HURL manager */
+HURLManager *manager = hurl_manager_init();
+/* Add URLs */
+hurl_add_url(manager, 1, "http://www.github.com/", NULL);
+hurl_add_url(manager, 1, "http://www.stackoverflow.com/", NULL);
+hurl_add_url(manager, 1, "http://www.stackoverflow.com/test/", NULL);
+/* Download files. */
+hurl_exec(manager);
+/* Find domain. */
+HURLDomain *domain = hurl_get_domain(manager, "www.stackoverflow.com");
+/* Count files. */
+int n = hurl_domain_nrof_paths(domain, DOWNLOAD_STATE_COMPLETED);
+printf("%d files from www.stackoverflow.com were downloaded.\n", n);
+/* Clean up. */
+hurl_manager_free(manager);
+```
+
+
+
 int hurl_nrof_paths(HURLManager *manager, enum HURLDownloadState state);
 char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
 void hurl_debug(const char *func, const char *msg, ...);
 void hurl_print_status(HURLManager *manager, FILE *fp);
 void *hurl_domain_exec(void *domain_ptr);
+
