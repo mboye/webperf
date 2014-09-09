@@ -195,7 +195,7 @@ HURLManager *manager = hurl_manager_init();
 /* Free memory when done. */
 hurl_manager_free(manager);
 ```
-Count number of files associated with a domain name
+Get domain queue length
 ---
 Counts the number of [HURLPath](#HURLPath) structures under a [HURLDomain](#HURLDomain) structure.
 ```
@@ -219,12 +219,72 @@ printf("%d files from www.stackoverflow.com were downloaded.\n", n);
 /* Clean up. */
 hurl_manager_free(manager);
 ```
-
-
-
+Get queue length
+---
+Counts the number of [HURLPath](#HURLPath) structures handled by a [HURLManager](#HURLManager)  structure.
+```
 int hurl_nrof_paths(HURLManager *manager, enum HURLDownloadState state);
+```
+**Example**
+```
+/* Initialize HURL manager */
+HURLManager *manager = hurl_manager_init();
+/* Add URLs */
+hurl_add_url(manager, 1, "http://www.facebook.com/", NULL);
+hurl_add_url(manager, 1, "http://www.google.com/", NULL);
+hurl_add_url(manager, 1, "http://www.aalto.fi/", NULL);
+/* Download files. */
+hurl_exec(manager);
+int n = hurl_nrof_paths(manager, DOWNLOAD_STATE_COMPLETED);
+printf("%d files were downloaded.\n", n);
+/* Clean up. */
+hurl_manager_free(manager);
+```
+Allocate memory and copy string
+---
+Allocates memory using calloc() and copies a string.
+```
 char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
+```
+**Example**
+```
+/* Set padding to 1 to create null-terminated string. */
+char *url = hurl_allocstrcpy("http://www.example.com/", strlen("http://www.example.com/"), 1);
+```
+Write debug message to stderr
+---
+Writes a debug message with calling function (\__func__), thread ID, and a formatted string.
+```
 void hurl_debug(const char *func, const char *msg, ...);
+```
+**Example**
+```
+if(connect(sockfd, addr, addr_len) < 0) {
+	hurl_debug(__func__, "Connect failed: %s", strerror(errno));
+	/* Output example
+	 * [1731745536] hurl_connect(): Connect failed: error message'
+	 */
+}
+```
+Print status of HURL execution
+---
+Writes a debug message with calling function (\__func__), thread ID, and a formatted string.
+```
 void hurl_print_status(HURLManager *manager, FILE *fp);
+```
+**Example**
+```
+hurl_print_status(manager, stderr);
+```
+Start domain manager
+---
+Handles download scheduling of files on a specific domain.
+```
 void *hurl_domain_exec(void *domain_ptr);
+```
+**Example**
+```
+int *result = (int *)hurl_domain_exec((void *)domain);
+```
+
 
