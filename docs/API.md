@@ -98,11 +98,11 @@ hurl_parsed_url_free(parsed_url);
 Find domain
 ---
 Find the [HURLDomain](#HURLDomain) structure of a domain name.
-```
+```C
 HURLDomain *hurl_get_domain(HURLManager *manager, char *domain);
 ```
 **Example**
-```
+```C
 	HURLDomain *domain = hurl_get_domain(manager, "www.google.com");
 ```
 Find server
@@ -110,9 +110,9 @@ Find server
 Find the [HURLServer](#HURLServer) structure of a server.
 ```
 HURLServer *hurl_get_server(HURLDomain *domain, unsigned short port, int tls);
-```
+```C
 **Example**
-```
+```C
 /* Find a server for www.github.com running on port 80 without TLS.  */
 HURLServer *server = hurl_get_server("www.github.com",80, 0);
 if(server) {
@@ -125,11 +125,11 @@ Add header
 ---
 Adds a header to a linked list of [HURLHeader](#HURLHeader) structures.
 If a header with the same key exists its value is overwritten.
-```
+```C
 int hurl_header_add(HURLHeader **headers, char *key, char *value);
 ```
 **Example**
-```
+```C
 /* Find a server for www.github.com running on port 80 without TLS.  */
 if(hurl_header_add(manager->headers, "User-Agent", "hurl/x.yy")) {
 	printf("Header added.\n");
@@ -142,11 +142,11 @@ Find header
 ---
 Finds a header in a linked list of [HURLHeader](#HURLHeader) structures and returns its value.
 Keys are **not** case sensitive and if the key is not found NULL is returned.
-```
+```C
 char *hurl_header_get(HURLHeader *headers, char *key);
 ```
 **Example**
-```
+```C
 /* Find 'User-Agent' header  */
 char *header_value = hurl_header_get(manager->headers, "user-agent");
 if(header_value) {
@@ -158,21 +158,21 @@ if(header_value) {
 Free headers
 ---
 Frees all elements in a linked list of [HURLHeader](#HURLHeader) structures.
-```
+```C
 void hurl_headers_free(HURLHeader *bgof_headers);
 ```
 **Example**
-```
+```C
 hurl_headers_free(manager->headers);
 ```
 Split HTTP header line
 ---
 Splits a HTTP header line into key and value.
-```
+```C
 int hurl_header_split_line(char *line, size_t line_len, char **key, char **value);
 ```
 **Example**
-```
+```C
 char *key, *value, line[64];
 snprintf(line, sizeof(line), "Content-Type: text/html");
 if(hurl_header_split_line(line, strlen(line), &key, &value)) {
@@ -185,11 +185,11 @@ Does header exist?
 ---
 Checks whether a certain HTTP header exists in a linked list of [HURLHeader](#HURLHeader) structures.
 Keys are **not** case sensitive.
-```
+```C
 int hurl_header_exists(HURLHeader *headers, char *key);
 ```
 **Example**
-```
+```C
 if(hurl_header_exists(manager->header, "Cache-Control")) {
 	printf("The header exists.\n");
 } else {
@@ -200,7 +200,7 @@ Free HURL structures
 ---
 The following functions are used to clean up memory used by HURL.
 Typically, only ```hurl_manager_free()``` is used as it cleans up everything.
-```
+```C
 void hurl_manager_free(HURLManager *manager);
 void hurl_domain_free(HURLManager *manager, HURLDomain *domain);
 void hurl_server_free(HURLManager *manager, HURLServer *server);
@@ -208,7 +208,7 @@ void hurl_path_free(HURLManager *manager, HURLPath *path);
 void hurl_connection_free(HURLConnection *connection);
 ```
 **Example**
-```
+```C
 /* Initialize HURL manager */
 HURLManager *manager = hurl_manager_init();
 /* Use HURL ... */
@@ -219,11 +219,11 @@ hurl_manager_free(manager);
 Get domain queue length
 ---
 Counts the number of [HURLPath](#HURLPath) structures under a [HURLDomain](#HURLDomain) structure.
-```
+```C
 int hurl_domain_nrof_paths(HURLDomain *domain, enum HURLDownloadState state);
 ```
 **Example**
-```
+```C
 /* Initialize HURL manager */
 HURLManager *manager = hurl_manager_init();
 /* Add URLs */
@@ -243,11 +243,11 @@ hurl_manager_free(manager);
 Get queue length
 ---
 Counts the number of [HURLPath](#HURLPath) structures handled by a [HURLManager](#HURLManager)  structure.
-```
+```C
 int hurl_nrof_paths(HURLManager *manager, enum HURLDownloadState state);
 ```
 **Example**
-```
+```C
 /* Initialize HURL manager */
 HURLManager *manager = hurl_manager_init();
 /* Add URLs */
@@ -264,22 +264,22 @@ hurl_manager_free(manager);
 Allocate memory and copy string
 ---
 Allocates memory using calloc() and copies a string.
-```
+```C
 char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
 ```
 **Example**
-```
+```C
 /* Set padding to 1 to create null-terminated string. */
 char *url = hurl_allocstrcpy("http://www.example.com/", strlen("http://www.example.com/"), 1);
 ```
 Write debug message to stderr
 ---
 Writes a debug message with calling function (\__func__), thread ID, and a formatted string.
-```
+```C
 void hurl_debug(const char *func, const char *msg, ...);
 ```
 **Example**
-```
+```C
 if(connect(sockfd, addr, addr_len) < 0) {
 	hurl_debug(__func__, "Connect failed: %s", strerror(errno));
 	/* Output example
@@ -290,17 +290,17 @@ if(connect(sockfd, addr, addr_len) < 0) {
 Print status of HURL execution
 ---
 Writes a debug message with calling function (\__func__), thread ID, and a formatted string.
-```
+```C
 void hurl_print_status(HURLManager *manager, FILE *fp);
 ```
 **Example**
-```
+```C
 hurl_print_status(manager, stderr);
 ```
 Start domain manager
 ---
 Handles download scheduling of files on a specific domain.
-```
+```C
 void *hurl_domain_exec(void *domain_ptr);
 ```
 **Example**
