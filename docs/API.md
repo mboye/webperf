@@ -1,5 +1,26 @@
 
-hurl_core.h
+**HURL Design**
+===
+This document aims to explain the design of HURL so that others contribute to the continued development of the library.
+
+Use of threads
+---
+HURL relies on threads for all parallel operations.
+When a URL is added to to HURL using [hurl_add_url()](#hurl_add_url) a tree structure is created with the [HURLManager](#HURLManager) structure as the root. When a URL is added three structures are created ad linked to a HURLManager: ```HURLDomain -> HURLServer -> HURLPath``` .
+
+HURLDomain and HURLServer structures are initialized as needed.
+
+When calling [hurl_exec() ](#hurl_exec) a thread is created for each distinct [HURLDomain](#HURLDomain) structure by calling pthread_create() with [hurl_domain_exec()](#hurl_domain_exec) as the function to start in the new thread, and a pointer to a [HURLDomain](#HURLDomain) structure.
+
+
+Connection limits
+---
+>How are connection limits calculated?
+
+___
+
+
+**hurl_core.h**
 ===
 
 Initialize HURL manager
