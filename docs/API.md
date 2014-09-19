@@ -15,7 +15,16 @@ When calling [hurl_exec() ](#hurl_exec) a thread is created for each distinct [H
 
 Connection limits
 ---
->How are connection limits calculated?
+HURL implements an overall TCP connection limit and a per-domain limit.
+When [hurl_exec()](#hurl_exec) is called the per-domain limit is calculated as follows:
+
+a = total number of paths in download queue across all domains
+b = number of paths hosted on domain D
+
+max_connections(D) = max((b/a)*overallMax, 1)
+
+
+
 
 ___
 
