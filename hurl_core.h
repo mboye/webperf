@@ -173,6 +173,7 @@ struct hurl_manager {
 	int (*hook_redirect)(HURLPath *, int, char *);
 	void (*hook_response_code)(HURLPath *, HURLConnection *, int, char *); /* Hook after HTTP response code has been found. */
 	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, size_t, size_t); /* Hook at end of transfer when using pipelining */
+	void (*hook_transfer_failed)(HURLPath *, HURLConnection *, size_t, size_t); /* Hook when transfer fails due to DNS or HTTP error */
 	void (*hook_request_sent)(HURLPath *, HURLConnection *); /* Hook after HTTP request has been sent. */
 	void *(*retag)(HURLPath *, char *); /* Create new tag for element in case of redirections. */
 	void (*free_tag)(void *tag); /* Frees tag structure */

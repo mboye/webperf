@@ -555,6 +555,8 @@ void *hurl_connection_exec(void *connection_ptr) {
 		domain->manager->connections--;
 		/* Mark file as failed. */
 		path->state = DOWNLOAD_STATE_ERROR;
+		/* Call transfer failed hook. */
+		manager->hook_transfer_failed(path, connection, 0, 0);
 		pthread_mutex_unlock(&manager->lock);
 		pthread_exit(NULL);
 	}
@@ -686,7 +688,6 @@ void *hurl_connection_exec(void *connection_ptr) {
 							/* Release lock. */
 							pthread_mutex_unlock(&manager->lock);
 							hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
-
 							continue;
 						}
 					}
@@ -695,6 +696,9 @@ void *hurl_connection_exec(void *connection_ptr) {
 					pthread_mutex_lock(&manager->lock);
 					path->state = DOWNLOAD_STATE_ERROR;
 					pthread_mutex_unlock(&manager->lock);
+
+					/* Call transfer failed hook. */
+					manager->hook_transfer_failed(path, connection, 0, 0);
 
 				}
 			}
@@ -711,6 +715,8 @@ void *hurl_connection_exec(void *connection_ptr) {
 			hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 
 			path->state = DOWNLOAD_STATE_ERROR;
+			/* Call transfer failed hook. */
+			manager->hook_transfer_failed(path, connection, 0, 0);
 			pthread_mutex_unlock(&manager->lock);
 			hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 		}
@@ -1395,6 +1401,8 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						pthread_mutex_lock(&manager->lock);
 						hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 						path->state = DOWNLOAD_STATE_ERROR;
+						/* Call transfer failed hook. */
+						manager->hook_transfer_failed(path, connection, content_len, header_len + overhead);
 						pthread_mutex_unlock(&manager->lock);
 						return 0;
 					}
@@ -1651,6 +1659,8 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 		} else {
 			/* Transfer was NOT completed. */
 			hurl_debug(__func__, "[ %s:%u%.32s ] Transfer failed.", path->server->domain->domain, connection->server->port, path->path);
+			/* Call transfer failed hook. */
+			manager->hook_transfer_failed(path, connection, content_len, header_len + overhead);
 			/* Free receive buffer */
 			free(receive_buffer);
 		}
@@ -1667,6 +1677,8 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 			path->state = DOWNLOAD_STATE_PENDING;
 		} else {
 			path->state = DOWNLOAD_STATE_ERROR;
+			/* Call transfer failed hook. */
+			manager->hook_transfer_failed(path, connection, content_len, header_len + overhead);
 		}
 	} else {
 		/* Request was sent on a reused connection. */
