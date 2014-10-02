@@ -65,6 +65,7 @@ HURLManager *hurl_manager_init() {
 		manager->recv_buffer_len = 0;
 		manager->http_version = 1.1f;
 		manager->follow_redirect = 1;
+		manager->max_redirects = HURL_MAX_REDIRECTS;
 		pthread_mutex_init(&manager->lock, NULL);
 		pthread_cond_init(&manager->condition, NULL);
 
@@ -556,7 +557,9 @@ void *hurl_connection_exec(void *connection_ptr) {
 		/* Mark file as failed. */
 		path->state = DOWNLOAD_STATE_ERROR;
 		/* Call transfer failed hook. */
-		manager->hook_transfer_failed(path, connection, 0, 0);
+		if (manager->hook_transfer_complete) {
+			manager->hook_transfer_complete(path, connection, HURL_XFER_DNS, 0, 0);
+		}
 		pthread_mutex_unlock(&manager->lock);
 		pthread_exit(NULL);
 	}
@@ -698,7 +701,9 @@ void *hurl_connection_exec(void *connection_ptr) {
 					pthread_mutex_unlock(&manager->lock);
 
 					/* Call transfer failed hook. */
-					manager->hook_transfer_failed(path, connection, 0, 0);
+					if (manager->hook_transfer_complete) {
+						manager->hook_transfer_complete(path, connection, HURL_XFER_HOOK, 0, 0);
+					}
 
 				}
 			}
@@ -716,7 +721,9 @@ void *hurl_connection_exec(void *connection_ptr) {
 
 			path->state = DOWNLOAD_STATE_ERROR;
 			/* Call transfer failed hook. */
-			manager->hook_transfer_failed(path, connection, 0, 0);
+			if (manager->hook_transfer_complete) {
+				manager->hook_transfer_complete(path, connection, HURL_XFER_CONNECT, 0, 0);
+			}
 			pthread_mutex_unlock(&manager->lock);
 			hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 		}
@@ -1287,13 +1294,9 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 	/* While receiving data or if socket was not ready. */
 	while (recv_len > 0) {
 		if ((recv_len = hurl_recv(connection, receive_buffer, receive_buffer_len)) > 0) {
-			/* hurl_debug(__func__, "[%s][%u][%s] Received %d bytes.", path->server->domain->domain, server->port, path->path, recv_len); */
-
 			/* Expand connection buffer if necessary. */
 			if (*buffer_len - *data_len <= (unsigned long) recv_len) {
 				/* Buffer needs more space. */
-				/* hurl_debug(__func__, "[%s][%u][%s] Expanding buffer.", path->server->domain->domain, server->port, path->path); */
-
 				next_buffer_len = *data_len + (size_t) recv_len;
 				if ((tmp = realloc(*buffer, next_buffer_len + 1)) != NULL) {
 					*buffer = tmp;
@@ -1303,10 +1306,16 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 					return 0;
 				}
 			}
+
 			/* Copy received data into connection buffer. */
 			memcpy(*buffer + *data_len, receive_buffer, (size_t) recv_len);
 			*data_len += (size_t) recv_len;
 			*(*buffer + *data_len) = '\0';
+
+			/* Call recv() hook */
+			if (manager->hook_recv) {
+				manager->hook_recv(path, connection, *buffer, *data_len);
+			}
 
 			if (eof_header == NULL && (eof_header = strstr(*buffer, "\r\n\r\n")) != NULL) {
 				/* Header received. */
@@ -1402,7 +1411,9 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
 						path->state = DOWNLOAD_STATE_ERROR;
 						/* Call transfer failed hook. */
-						manager->hook_transfer_failed(path, connection, content_len, header_len + overhead);
+						if (manager->hook_transfer_complete) {
+							manager->hook_transfer_complete(path, connection, HURL_XFER_PARSING, content_len, header_len + overhead);
+						}
 						pthread_mutex_unlock(&manager->lock);
 						return 0;
 					}
@@ -1462,24 +1473,39 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 							hurl_debug(__func__, "Relative redirection: '%s' => '%s'", redirect_location, redirect_url);
 						}
 
-						/* Hook point. Should redirect be followed? */
-						if ((manager->hook_redirect == NULL && manager->follow_redirect)
-								|| (manager->hook_redirect != NULL && manager->hook_redirect(path, response_code, redirect_url))) {
-							/* Follow redirection by adding a new item to download queue.
-							 * DO NOT ALLOW DUPLICATES! */
-
-							if (!(path_created = hurl_add_url(manager, 0, redirect_url, NULL))) {
-								hurl_debug(__func__, "Failed to add redirect to download queue.");
-							} else {
-								/* The path was added, to fix tag */
-								path_created->tag = !manager->retag ? path->tag : manager->retag(path, redirect_url);
+						if (path->redirect_count < manager->max_redirects) {
+							/* Hook point. Should redirect be followed? */
+							if ((manager->hook_redirect == NULL && manager->follow_redirect)
+									|| (manager->hook_redirect != NULL && manager->hook_redirect(path, response_code, redirect_url))) {
+								/* Follow redirection by adding a new item to download queue.
+								 * DO NOT ALLOW DUPLICATES! */
+								if ((path_created = hurl_add_url(manager, 0, redirect_url, NULL)) == NULL) {
+									hurl_debug(__func__, "Failed to add redirect to download queue.");
+								} else {
+									/* The path was added, to fix tag */
+									path_created->tag = !manager->retag ? path->tag : manager->retag(path, redirect_url);
+									path_created->redirect_count = path->redirect_count + 1;
+								}
 							}
+						} else {
+							hurl_debug(__func__, "HTTP redirect loop detected.");
+							free(*buffer);
+							*buffer = NULL;
+							*data_len = 0;
+							free(redirect_location);
+							pthread_mutex_lock(&manager->lock);
+							hurl_debug(__func__, "Thread %u got lock.", (unsigned int) pthread_self());
+							path->state = DOWNLOAD_STATE_ERROR;
+							/* Call transfer failed hook. */
+							if (manager->hook_transfer_complete) {
+								manager->hook_transfer_complete(path, connection, HURL_XFER_REDIRECT_LOOP, content_len, header_len + overhead);
+							}
+							pthread_mutex_unlock(&manager->lock);
+							return 0;
 						}
-
 					} else {
 						hurl_debug(__func__, "Redirect detected but location header is missing.");
 					}
-
 				} else if (response_code < 100) {
 					hurl_debug(__func__, "Warning: Bad response code.");
 				}
@@ -1491,7 +1517,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 					chunk_ptr = eof_header;
 				}
 
-				/* release memory allocated above */
+				/* Release memory allocated above */
 				free(redirect_url);
 				free(redirect_location);
 				free(content_type);
@@ -1503,29 +1529,25 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 			received += (size_t) recv_len;
 
 			if (eof_header != NULL) {
-
 				if (!chunked_encoding) {
 					/* Call receive hook */
 					if (manager->hook_body_recv != NULL) {
-
 						body_recv_len = header_len + (size_t) recv_len > received ? received - header_len : (size_t) recv_len;
 						/* Check if body_recv_len exceeds content length of current response. */
 						if (hook_recv_body_offset + body_recv_len > content_len) {
 							body_recv_len = content_len - hook_recv_body_offset;
 						}
-
 						manager->hook_body_recv(path, *buffer + header_len + hook_recv_body_offset, body_recv_len);
 						hook_recv_body_offset += body_recv_len;
-						/* hurl_debug(__func__, "recv_len=%d, body_recv_len=%d", recv_len, body_recv_len); */
 					}
 				}
 
 				/* Check if the whole file has been received. */
-				if (!chunked_encoding && received >= header_len + content_len) {
+				if (!chunked_encoding && received >= header_len + content_len + overhead) {
 					transfer_complete = 1;
 
 					if (manager->hook_transfer_complete != NULL) {
-						manager->hook_transfer_complete(path, connection, content_len, header_len);
+						manager->hook_transfer_complete(path, connection, HURL_XFER_OK, content_len, header_len);
 					}
 
 					hurl_debug(__func__, "[ %s:%u%.32s ] Transfer complete: %d bytes received.", path->server->domain->domain, connection->server->port,
@@ -1592,7 +1614,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 							transfer_complete = 1;
 							/* Call hook */
 							if (manager->hook_transfer_complete != NULL) {
-								manager->hook_transfer_complete(path, connection, content_len, header_len + overhead);
+								manager->hook_transfer_complete(path, connection, HURL_XFER_OK, content_len, header_len + overhead);
 							}
 
 							/* Download complete. */
@@ -1609,7 +1631,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 					}
 				}
 				if (transfer_complete) {
-					/* Call hook */
+					/* Call hook - indicate end of data */
 					if (manager->hook_body_recv) {
 						manager->hook_body_recv(path, NULL, 0);
 					}
@@ -1632,9 +1654,6 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						*buffer_len = next_buffer_len;
 						free(*buffer);
 						*buffer = tmp;
-						/*
-						 hurl_debug(__func__, "BUFFER AFTER FIX", *buffer);
-						 printf("%s", *buffer); */
 						return 1;
 					} else {
 						hurl_debug(__func__, "Freeing buffer.");
@@ -1645,6 +1664,11 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 						return 0;
 					}
 				}
+				/* In case of HTTP redirection we don't expect to get this far. */
+				if (chunked_encoding == 1 && response_code > 400 && response_code < 300) {
+					/* Bad chunked encoding */
+					hurl_debug(__func__, "HTTP redirect: Failed to detect end of chunked encoding.");
+				}
 			}
 		} else if (recv_len == 0) {
 			/* Connection closed prematurely by server. */
@@ -1654,13 +1678,19 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 			free(*buffer);
 			*buffer = NULL;
 			*data_len = 0;
+			/* Call transfer failed hook. */
+			if (manager->hook_transfer_complete) {
+				manager->hook_transfer_complete(path, connection, HURL_XFER_FAILED, content_len, header_len + overhead);
+			}
 			/* Free receive buffer */
 			free(receive_buffer);
 		} else {
 			/* Transfer was NOT completed. */
 			hurl_debug(__func__, "[ %s:%u%.32s ] Transfer failed.", path->server->domain->domain, connection->server->port, path->path);
 			/* Call transfer failed hook. */
-			manager->hook_transfer_failed(path, connection, content_len, header_len + overhead);
+			if (manager->hook_transfer_complete) {
+				manager->hook_transfer_complete(path, connection, HURL_XFER_FAILED, content_len, header_len + overhead);
+			}
 			/* Free receive buffer */
 			free(receive_buffer);
 		}
@@ -1677,8 +1707,6 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 			path->state = DOWNLOAD_STATE_PENDING;
 		} else {
 			path->state = DOWNLOAD_STATE_ERROR;
-			/* Call transfer failed hook. */
-			manager->hook_transfer_failed(path, connection, content_len, header_len + overhead);
 		}
 	} else {
 		/* Request was sent on a reused connection. */

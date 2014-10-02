@@ -20,6 +20,7 @@
 #define HURL_MAX_PIPELINE_REQUESTS 3 /* Maximum number of consecutive HTTP requests to send. */
 #define HURL_KEEP_ALIVE 60 /* 60 seconds */
 #define HURL_MAX_RETRIES 0 /* Number of download retries. */
+#define HURL_MAX_REDIRECTS 2 /* Number of HTTP redirects. */
 #define HURL_TIMEOUT 5000 /* Default timeout in ms. */
 #define HURL_CA_PATH "/etc/ssl/certs/"
 
@@ -62,6 +63,19 @@ enum HURLServerState {
 
 enum HURLConnectResult {
 	CONNECTION_ERROR = 0, CONNECTION_NEW = 1, CONNECTION_REUSED = 2
+};
+
+typedef enum hurl_transfer_result HURLTransferResult;
+enum hurl_transfer_result {
+	HURL_XFER_HOOK = -6,
+	HURL_XFER_REDIRECT_LOOP = -5,
+	HURL_XFER_PARSING = -4,
+	HURL_XFER_FAILED = -3,
+	HURL_XFER_CONNECT = -2,
+	HURL_XFER_DNS = -1,
+	HURL_XFER_NONE = 0,
+	HURL_XFER_OK = 1,
+	HURL_XFER_REDIRECT = 2
 };
 
 /* Hierarchical structure of hurl:
@@ -117,6 +131,7 @@ struct hurl_path {
 	void *tag; /* Used to associate data with a path. */
 	struct timeval request_sent; /* When was a GET request sent for this path. */
 	struct timeval response_received; /* When was the response to the GET request received. */
+	int redirect_count; /* Number of redirects that have been followed. */
 };
 
 /* Structure representing a TCP connection to a server. */
@@ -161,19 +176,20 @@ struct hurl_manager {
 	unsigned int nrof_domains; /* Number of domains. */
 	unsigned int connections; /* Number of open connections. */
 	unsigned int max_retries; /* Maximum number of dowmload retries. */
+	unsigned int max_redirects; /* Maximum number of HTTP redirects to follow. */
 
 	void (*hook_resolve)(HURLDomain *, HURLPath *); /* Override DNS resolution. */
 	int (*hook_pre_connect)(HURLPath *, HURLConnection *); /* Hook before calling connect() */
 	void (*hook_post_connect)(HURLPath *, HURLConnection *, int); /* Hook after calling connect() */
 	void (*hook_connection_close)(HURLPath *, HURLConnection *); /* Hook before calling close() */
 	int (*hook_send_request)(HURLPath *, HURLConnection *, int); /* Hook before a request is sent. */
+	void (*hook_recv)(HURLPath *, HURLConnection *, char *, size_t); /* Hook immediately after data has been received. */
 	void (*hook_header_received)(HURLPath *, int, HURLHeader *, size_t);
 	void (*hook_body_recv)(HURLPath *, char *, size_t);
 	void (*hook_header_recv)(HURLPath *, char *, size_t); /* Hook after entire header has been received. */
 	int (*hook_redirect)(HURLPath *, int, char *);
 	void (*hook_response_code)(HURLPath *, HURLConnection *, int, char *); /* Hook after HTTP response code has been found. */
-	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, size_t, size_t); /* Hook at end of transfer when using pipelining */
-	void (*hook_transfer_failed)(HURLPath *, HURLConnection *, size_t, size_t); /* Hook when transfer fails due to DNS or HTTP error */
+	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, HURLTransferResult, size_t, size_t); /* Hook at end of transfer when using pipelining */
 	void (*hook_request_sent)(HURLPath *, HURLConnection *); /* Hook after HTTP request has been sent. */
 	void *(*retag)(HURLPath *, char *); /* Create new tag for element in case of redirections. */
 	void (*free_tag)(void *tag); /* Frees tag structure */
