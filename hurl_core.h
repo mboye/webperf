@@ -65,7 +65,6 @@ enum HURLConnectResult {
 	CONNECTION_ERROR = 0, CONNECTION_NEW = 1, CONNECTION_REUSED = 2
 };
 
-typedef enum hurl_transfer_result HURLTransferResult;
 enum hurl_transfer_result {
 	HURL_XFER_HOOK = -6,
 	HURL_XFER_REDIRECT_LOOP = -5,
@@ -77,6 +76,7 @@ enum hurl_transfer_result {
 	HURL_XFER_OK = 1,
 	HURL_XFER_REDIRECT = 2
 };
+typedef enum hurl_transfer_result HURLTransferResult;
 
 /* Hierarchical structure of hurl:
  * HURLManager
