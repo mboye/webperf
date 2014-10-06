@@ -477,7 +477,7 @@ void *hurl_connection_exec(void *connection_ptr) {
 	HURLPath *path = NULL;
 	int connect_retval;
 	char *buffer = NULL;
-	unsigned long buffer_len = 0, data_len = 0;
+	size_t buffer_len = 0, data_len = 0;
 	enum HTTPFeatureSupport feature_persistence = UNKNOWN_SUPPORT, feature_pipelining = UNKNOWN_SUPPORT;
 	unsigned int i;
 	HURLPath **queue;
