@@ -28,7 +28,7 @@
 
 void *hurl_connection_exec(void *connection_ptr);
 HURLPath *hurl_server_dequeue(HURLServer *server);
-int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, unsigned long *buffer_len, unsigned long *data_len,
+int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, size_t *buffer_len, size_t *data_len,
 		enum HTTPFeatureSupport *feature_persistence);
 int hurl_connection_request(HURLConnection *connection, HURLPath *path);
 void hurl_resolve(HURLDomain *domain); /* Default DNS resolution. */
