@@ -105,6 +105,7 @@ struct hurl_domain {
 	HURLPath *dns_trigger; /* The path that triggered DNS resolution. */
 	struct timeval bgof_resolution; /* When did the resolution process begin? */
 	float resolution_time; /* How long did the resolution process take? */
+	void *tag;
 };
 
 /* Structure representing a server. */
@@ -119,6 +120,7 @@ struct hurl_server {
 	unsigned int max_connections; /* Maximum number of connections to this server. */
 	enum HURLServerState state; /* Server state. */
 	unsigned int pipeline_errors; /* Number of times pipelined requests failed. */
+	void *tag;
 };
 
 /* Structure representing a path of a server. */
@@ -191,7 +193,7 @@ struct hurl_manager {
 	void (*hook_response_code)(HURLPath *, HURLConnection *, int, char *); /* Hook after HTTP response code has been found. */
 	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, HURLTransferResult, size_t, size_t); /* Hook at end of transfer when using pipelining */
 	void (*hook_request_sent)(HURLPath *, HURLConnection *); /* Hook after HTTP request has been sent. */
-	void *(*retag)(HURLPath *, char *); /* Create new tag for element in case of redirections. */
+	void *(*retag)(HURLPath *, HURLPath *, char *); /* Create new tag for element in case of redirections. */
 	void (*free_tag)(void *tag); /* Frees tag structure */
 	unsigned int recv_buffer_len; /* Size of receive buffer. */
 	pthread_mutex_t lock; /* Mutex for connections variable. */
