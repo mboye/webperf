@@ -66,15 +66,15 @@ enum HURLConnectResult {
 };
 
 enum hurl_transfer_result {
-	HURL_XFER_HOOK = -6,
-	HURL_XFER_REDIRECT_LOOP = -5,
-	HURL_XFER_PARSING = -4,
-	HURL_XFER_FAILED = -3,
-	HURL_XFER_CONNECT = -2,
-	HURL_XFER_DNS = -1,
-	HURL_XFER_NONE = 0,
-	HURL_XFER_OK = 1,
-	HURL_XFER_REDIRECT = 2
+	HURL_XFER_HOOK = -6, /* Transfer aborted due to hook return value. */
+	HURL_XFER_REDIRECT_LOOP = -5, /* HTTP redirect limit reached. */
+	HURL_XFER_PARSING = -4, /* HTTP header parsing error. */
+	HURL_XFER_FAILED = -3, /* Transfer failed after connecting */
+	HURL_XFER_CONNECT = -2, /* TCP/SSL connection could not be established. */
+	HURL_XFER_DNS = -1, /* DNS resolution failed. */
+	HURL_XFER_NONE = 0, /* No result yet. Target has not been processed. */
+	HURL_XFER_OK = 1, /* Transfer successful. */
+	HURL_XFER_REDIRECT = 2 /* Transfer contained HTTP redirect. */
 };
 typedef enum hurl_transfer_result HURLTransferResult;
 
@@ -105,7 +105,7 @@ struct hurl_domain {
 	HURLPath *dns_trigger; /* The path that triggered DNS resolution. */
 	struct timeval bgof_resolution; /* When did the resolution process begin? */
 	float resolution_time; /* How long did the resolution process take? */
-	void *tag;
+	void *tag; /* Pointer used to associate user data with domain. */
 };
 
 /* Structure representing a server. */
@@ -120,7 +120,7 @@ struct hurl_server {
 	unsigned int max_connections; /* Maximum number of connections to this server. */
 	enum HURLServerState state; /* Server state. */
 	unsigned int pipeline_errors; /* Number of times pipelined requests failed. */
-	void *tag;
+	void *tag;  /* Pointer used to associate user data with server. */
 };
 
 /* Structure representing a path of a server. */
@@ -130,7 +130,7 @@ struct hurl_path {
 	enum HURLDownloadState state; /* Has the file been downloaded? */
 	HURLPath *previous, *next; /* Linked list pointers. */
 	unsigned int retries; /* Number of retries. */
-	void *tag; /* Used to associate data with a path. */
+	void *tag; /*  /* Pointer used to associate user data with path (target). */ */
 	struct timeval request_sent; /* When was a GET request sent for this path. */
 	struct timeval response_received; /* When was the response to the GET request received. */
 	int redirect_count; /* Number of redirects that have been followed. */
@@ -156,13 +156,13 @@ struct hurl_connection {
 
 /* Structure representing a HTTP header. */
 struct hurl_header {
-	char *key, *value;
-	HURLHeader *previous, *next;
+	char *key, *value; /* key-value pair */
+	HURLHeader *previous, *next; /* Linked list pointers */
 };
 
 /* Root structure of hurl. */
 struct hurl_manager {
-	float http_version;
+	float http_version; /* HTTP version to send in requests. */
 	enum HTTPFeatureSupport feature_tls; /* Als download files using TLS. */
 	enum HTTPFeatureSupport feature_pipelining; /* Use pipelining if possible. */
 	enum HTTPFeatureSupport feature_persistence; /* Use pipelining if possible. */
@@ -180,22 +180,128 @@ struct hurl_manager {
 	unsigned int max_retries; /* Maximum number of dowmload retries. */
 	unsigned int max_redirects; /* Maximum number of HTTP redirects to follow. */
 
+	/* HOOK POINTS */
+	/* DNS OVERRIDE HOOK
+	*  Event: Resolve domain name
+	*  Parameters:	-- Domain that needs name resolution.
+									-- Path that triggered the event.
+	*/
 	void (*hook_resolve)(HURLDomain *, HURLPath *); /* Override DNS resolution. */
+
+	/* PRE-CONNECT HOOK
+	*  Event: HURL is about to connect to a server
+	*  Parameters:	-- Path being downloaded which triggered the event.
+									-- Parameters of the connection that will be established.
+	*/
 	int (*hook_pre_connect)(HURLPath *, HURLConnection *); /* Hook before calling connect() */
+
+	/* POST-CONNECT HOOK
+	*  Event: HURL has attempted to connect to a server.
+	*  Parameters:	-- Path being downloaded which triggered the event.
+									-- Parameters of the connection.
+									-- Result of connect attempt. TODO: Check enum
+	*/
 	void (*hook_post_connect)(HURLPath *, HURLConnection *, int); /* Hook after calling connect() */
+
+	/* CONNECTION CLOSED HOOK
+	*  Event: HURL has closed a connection to a server.
+	*  Parameters:	-- Path being downloaded which triggered the event.
+									-- Parameters of the connection which was closed.
+	*/
 	void (*hook_connection_close)(HURLPath *, HURLConnection *); /* Hook before calling close() */
+
+	/* REQUEST PRE-TRANSMISSION HOOK
+	*  Event: HURL is about to send an HTTP request.
+	*  Parameters:	-- The path that will we requested.
+									-- The connection the request will be sent on.
+									-- Will the request be pipelined?
+	*/
 	int (*hook_send_request)(HURLPath *, HURLConnection *, int); /* Hook before a request is sent. */
+
+	/* RECEIVE RESPONSE HOOK
+	*  Event: HURL has received raw response data.
+	*  Parameters:	-- The path which the data belongs to.
+									-- The connection the data was received on.
+									-- Pointer to first byte of ENTIRE response.
+									-- Number of bytes received.
+	*/
 	void (*hook_recv)(HURLPath *, HURLConnection *, char *, size_t); /* Hook immediately after data has been received. */
+
+	/* HEADER RECEIVED AND PARSED HOOK
+	*  Event: HURL has received and parsed the entire HTTP header of a response.
+	*  Parameters:	-- The path which the response header belongs to.
+									-- HTTP response code.
+									-- Pointer to first item in linked list of headers.
+									-- Header size in bytes.
+	*/
 	void (*hook_header_received)(HURLPath *, int, HURLHeader *, size_t);
-	void (*hook_body_recv)(HURLPath *, char *, size_t);
-	void (*hook_header_recv)(HURLPath *, char *, size_t); /* Hook after entire header has been received. */
+
+	/* RECEIVE DECODED RESPONSE BODY
+	*  Event: HURL has received body data.
+	*  Parameters:	-- The path which the data belongs to.
+									-- Pointer to received data chunk (NOT beginning of response).
+									-- Size of received data chunk.
+	*/
+	void (*hook_body_recv)(HURLPath *, char *, size_t); /* Event: Body data received */
+
+	/* HEADER RECEIVED HOOK
+	*  Event: HURL has received the entire HTTP response header.
+	*  Parameters:	-- The path which the data belongs to.
+									-- Pointer to the beginning of the HTTP response header.
+									-- Size of response header.
+	*/
+	void (*hook_header_recv)(HURLPath *, char *, size_t);
+
+	/* HTTP REDIRECT HOOK
+	*  Event: 	HURL has received a response that contains an HTTP redirection (3xx response code).
+	*  Parameters:	-- The path which received the redirection.
+									-- The HTTP response code.
+									-- Absolute redirection URL.
+	*/
 	int (*hook_redirect)(HURLPath *, int, char *);
+
+	/* HTTP RESPONSE TEXT AND CODE HOOK
+	*  Event: 	HURL has received and parsed the first line of a HTTP response.
+	*  Parameters:	-- The path the response belongs to.
+									-- The connection the response was received on.
+									-- The HTTP response code, e.g. 404
+									-- The HTTP response text, e.g. "Not found"
+	*/
 	void (*hook_response_code)(HURLPath *, HURLConnection *, int, char *); /* Hook after HTTP response code has been found. */
-	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, HURLTransferResult, size_t, size_t); /* Hook at end of transfer when using pipelining */
+
+	/* TRANSFER COMPLETED HOOK
+	*  Event: 	HURL has finnished downloading a path.
+	*  Parameters:	-- The path that has been processed.
+									-- The connection the transfer used.
+									-- The result of the transfer.
+									-- The decoded content length
+									-- Header size + chunked encoding overhead.
+	*/
+	void (*hook_transfer_complete)(HURLPath *, HURLConnection *, HURLTransferResult, size_t, size_t);
+
+	/* REQUEST POST-TRANSMISSION HOOK
+	*  Event: 	HURL has sent an HTTP request.
+	*  Parameters:	-- The path for which the request was sent.
+									-- The connection the request was sent on.
+	*/
 	void (*hook_request_sent)(HURLPath *, HURLConnection *); /* Hook after HTTP request has been sent. */
-	void *(*retag)(HURLPath *, HURLPath *, char *); /* Create new tag for element in case of redirections. */
+
+	/* HTTP RETAGGING HOOK
+	*  Event: 	HURL is following an HTTP redirection.
+							This hook allows manipulation of tag elements.
+	*  Parameters:	-- The path created due to HTTP redirection.
+									-- The path that was redirected.
+									-- The absolute redirection URL.
+	*/
+	void *(*retag)(HURLPath *, HURLPath *, char *);
+
+	/* FREE TAG HOOK
+	*  Event: 	HURL is cleaning up memory.
+	*  Parameters:	-- Pointer to the tag that should be free()'d.
+	*/
 	void (*free_tag)(void *tag); /* Frees tag structure */
-	unsigned int recv_buffer_len; /* Size of receive buffer. */
+
+	unsigned int recv_buffer_len; /* Size of TCP receive buffer. */
 	pthread_mutex_t lock; /* Mutex for connections variable. */
 	pthread_cond_t condition; /* Condition for connections variable. */
 	HURLHeader *headers; /* Linked list of headers to include in HTTP requests. */
