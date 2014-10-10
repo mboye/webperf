@@ -53,16 +53,22 @@ enum HURLDownloadState {
 };
 
 enum HURLDNSState {
-	DNS_STATE_UNRESOLVED = 0, DNS_STATE_RESOLVED, DNS_STATE_ERROR
+	DNS_STATE_UNRESOLVED = 0, /* Name resolution has not been attempted yet. */
+	DNS_STATE_RESOLVED, /* Name resolution was successful. */
+	DNS_STATE_ERROR /* Name resolution failed. */
 };
 
 enum HURLServerState {
-	SERVER_STATE_OK = 0, SERVER_STATE_ERROR = -1, SERVER_STATE_SSL_ERROR = -2
+	SERVER_STATE_OK = 0, /* The server is functional */
+	SERVER_STATE_ERROR = -1, /* Something went wrong with the server. */
+	SERVER_STATE_SSL_ERROR = -2 /* Failed to secure connection. */
 
 };
 
 enum HURLConnectResult {
-	CONNECTION_ERROR = 0, CONNECTION_NEW = 1, CONNECTION_REUSED = 2
+	CONNECTION_ERROR = 0, /* The connection attempt failed. */
+	 CONNECTION_NEW = 1, /* A new connection was succcessfully established. */
+	 CONNECTION_REUSED = 2 /* An existing connection is being reused. */
 };
 
 enum hurl_transfer_result {
@@ -96,7 +102,7 @@ struct hurl_domain {
 	enum HURLDNSState dns_state; /* Has the domain name been resolved? */
 	HURLServer *servers; /* Linked list of servers. */
 	unsigned short nrof_servers; /* Number of servers. */
-	unsigned int max_connections;
+	unsigned int max_connections; /* Overall connection limit */
 	unsigned int nrof_connections; /* Number of connections. */
 	unsigned int nrof_paths; /* Number of paths belonging to this domain. */
 	pthread_mutex_t dns_lock; /* DNS resolution lock. */
@@ -163,9 +169,9 @@ struct hurl_header {
 /* Root structure of hurl. */
 struct hurl_manager {
 	float http_version; /* HTTP version to send in requests. */
-	enum HTTPFeatureSupport feature_tls; /* Als download files using TLS. */
+	enum HTTPFeatureSupport feature_tls; /* Allow TLS connections. */
 	enum HTTPFeatureSupport feature_pipelining; /* Use pipelining if possible. */
-	enum HTTPFeatureSupport feature_persistence; /* Use pipelining if possible. */
+	enum HTTPFeatureSupport feature_persistence; /* Use persistent connections if possible. */
 	int follow_redirect; /* Follow HTTP redirects. */
 	unsigned int max_domain_connections; /* Maximum number of connections to a domain. */
 	unsigned int max_connections; /* Maximum number of connections regardless of domain. */
@@ -303,7 +309,7 @@ struct hurl_manager {
 
 	unsigned int recv_buffer_len; /* Size of TCP receive buffer. */
 	pthread_mutex_t lock; /* Mutex for connections variable. */
-	pthread_cond_t condition; /* Condition for connections variable. */
+	pthread_cond_t condition; /* Condition for accessing connections variable. */
 	HURLHeader *headers; /* Linked list of headers to include in HTTP requests. */
 	struct timeval bgof_exec; /* When did the download process begin? */
 	float exec_time; /* When did the download process begin? */
@@ -315,7 +321,7 @@ struct hurl_manager {
 
 /* Structure representing a parsed URL. */
 struct hurl_parsed_url {
-	char *protocol; /* Protocol e.g. http, https */
+	char *protocol; /* Protocol: http or https */
 	char *hostname; /* Host/domain name */
 	unsigned short port; /* Server port. Default is port 80 for HTTP and 443 for HTTPS */
 	char *path; /* Path e.g. /index.html */
@@ -323,35 +329,80 @@ struct hurl_parsed_url {
 
 /* Structure used to create pipelining queue. */
 struct hurl_pipeline_queue {
-	HURLPath *path;
-	HURLPipelineQueue *previous, *next;
+	HURLPath *path; /* Download target */
+	HURLPipelineQueue *previous, *next; /* Linked list pointers */
 };
-/* Initializes hurl with default values. */
+
+/* Initializes HURL manager with default values. */
 HURLManager *hurl_manager_init();
+
+/* Add download target to queue using absolute URL. */
 HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, void *tag);
+
+/* Download queued targets */
 int hurl_exec(HURLManager *manager);
+
+/* Parse HTTP(S) URL into protocol, hostname, port, and path */
 int hurl_parse_url(char *url, HURLParsedURL **result);
+
+/* Release memory used by parsed URL structure */
 void hurl_parsed_url_free(HURLParsedURL *url);
+
+/* Get domain structure. If the domain does not exist it will be created. */
 HURLDomain *hurl_get_domain(HURLManager *manager, char *domain);
+
+/* Get server structure. If the server does not exist it will be created. */
 HURLServer *hurl_get_server(HURLDomain *domain, unsigned short port, int tls);
+
+/* Add header key-value pair to list of headers. */
 int hurl_header_add(HURLHeader **headers, char *key, char *value);
+
+/* Get value of header in list of headers. */
 char *hurl_header_get(HURLHeader *headers, char *key);
+
+/* Free memory used by list of headers. */
 void hurl_headers_free(HURLHeader *bgof_headers);
+
+/* Split HTTP header line into key and value. */
 int hurl_header_split_line(char *line, size_t line_len, char **key, char **value);
+
+/* Check if header key is present in a list of headers. */
 int hurl_header_exists(HURLHeader *headers, char *key);
+
+/* Free memory used by HURL manager structure and ALL associated structures. */
 void hurl_manager_free(HURLManager *manager);
+
+/* Free domain structure and associated structures. */
 void hurl_domain_free(HURLManager *manager, HURLDomain *domain);
+
+/* Free server structure and associated structures. */
 void hurl_server_free(HURLManager *manager, HURLServer *server);
+
+/* Free path structure. */
 void hurl_path_free(HURLManager *manager, HURLPath *path);
+
+/* Free connection structure. */
 void hurl_connection_free(HURLConnection *connection);
+
+/* Count number of paths with a certain download state hosted on a certain domain. */
 int hurl_domain_nrof_paths(HURLDomain *domain, enum HURLDownloadState state);
+
+/* Count total number of paths in the HURL queue with a certain download state. */
 int hurl_nrof_paths(HURLManager *manager, enum HURLDownloadState state);
+
+/* Allocate memory and copy string to it. */
 char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
+
+/* Write debug line containing calling thread, function, and a message. *//
 void hurl_debug(const char *func, const char *msg, ...);
+
+/* Print status of HURL execution. */
 void hurl_print_status(HURLManager *manager, FILE *fp);
+
+/* Execute download of paths on a domain. */
 void *hurl_domain_exec(void *domain_ptr);
 
-/* Macro functions */
+/* Converts struct timeval into milliseconds. */
 #ifndef timeval_to_msec
 #define timeval_to_msec(t) (float)((t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3)
 #endif
