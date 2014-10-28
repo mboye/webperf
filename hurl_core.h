@@ -136,7 +136,7 @@ struct hurl_path {
 	enum HURLDownloadState state; /* Has the file been downloaded? */
 	HURLPath *previous, *next; /* Linked list pointers. */
 	unsigned int retries; /* Number of retries. */
-	void *tag; /*  /* Pointer used to associate user data with path (target). */ */
+	void *tag; /*  ointer used to associate user data with path (target). */
 	struct timeval request_sent; /* When was a GET request sent for this path. */
 	struct timeval response_received; /* When was the response to the GET request received. */
 	int redirect_count; /* Number of redirects that have been followed. */
@@ -393,7 +393,7 @@ int hurl_nrof_paths(HURLManager *manager, enum HURLDownloadState state);
 /* Allocate memory and copy string to it. */
 char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
 
-/* Write debug line containing calling thread, function, and a message. *//
+/* Write debug line containing calling thread, function, and a message. */
 void hurl_debug(const char *func, const char *msg, ...);
 
 /* Print status of HURL execution. */

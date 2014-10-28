@@ -693,6 +693,9 @@ void *hurl_connection_exec(void *connection_ptr) {
 							hurl_debug(__func__, "Thread %u released lock.", (unsigned int) pthread_self());
 							continue;
 						}
+					} else {
+						/* Failed to send request */
+						/* TODO: Handle failed request transmission. */ 
 					}
 				} else {
 					/* We were not allowed to send the request */
