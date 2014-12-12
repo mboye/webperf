@@ -1,31 +1,26 @@
-# Recent Mac OS X versions deprecate OpenSSL, overruling that
+export COMPILER=/usr/bin/gcc -Wall -pedantic -std=gnu99
+export GTEST=$(shell pwd)/gmock-1.7.0/gtest
+export GMOCK=$(shell pwd)/gmock-1.7.0
+export ODIR=$(shell pwd)/bin
+export PWD=$(shell pwd)
+
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
-        CCFLAGS += -Wno-deprecated-declarations
+        export DYLD_FALLBACK_LIBRARY_PATH=$(GTEST)/lib/.libs
 endif
 
-COMPILER=/usr/bin/gcc -std=gnu99 -pedantic -Wall $(CCFLAGS)
-#COMPILER=/usr/bin/clang -std=gnu99 -pedantic -Wall -Weverything $(CCFLAGS)
+all: build-setup hurl ut
 
-all: release
+build-setup:
+	-mkdir $(ODIR) > /dev/null 2>&1
 
-release: hurl_core.c hurl_parse.c hurl_core.h 
-	$(COMPILER) -Os -shared -fPIC -o libhurl.so *.c -lm -pthread -lssl -lcrypto -DNDEBUG
+hurl: FORCE
+	make -C src
 
-debug: hurl_core.c hurl_parse.c hurl_core.h 
-	$(COMPILER) -g3 -shared -fPIC -o libhurl.so *.c -lm -pthread -lssl -lcrypto
-
-release-static: hurl_core.c hurl_parse.c hurl_core.h
-	$(COMPILER) -c hurl_core.c -o hurl_core.o
-	$(COMPILER) -c hurl_parse.c -o hurl_parse.o
-	ar rvs libhurl.a hurl_core.o hurl_parse.o
-    
-debug-static: hurl_core.c hurl_parse.c hurl_core.h
-	$(COMPILER) -g3 -c hurl_core.c -o hurl_core.o
-	$(COMPILER) -g3 -c hurl_parse.c -o hurl_parse.o
-	ar rvs libhurl.a hurl_core.o hurl_parse.o
+ut: build-setup FORCE
+	make -C ut
 
 clean: FORCE
-	rm -f libhurl.so libhurl.a *.o
+	rm -rf bin
 
 FORCE:

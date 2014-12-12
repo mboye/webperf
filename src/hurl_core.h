@@ -65,6 +65,9 @@ enum HURLServerState {
 
 };
 
+#define HURL_URL_PARSE_OK 0
+#define HURL_URL_PARSE_ERROR 1
+
 enum HURLConnectResult {
 	CONNECTION_ERROR = 0, /* The connection attempt failed. */
 	 CONNECTION_NEW = 1, /* A new connection was succcessfully established. */

@@ -27,7 +27,7 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 	if ((*result) == NULL) {
 		/* Out of memory. */
 		free(url);
-		return 0;
+		return HURL_URL_PARSE_ERROR;
 	}
 
 	eof_url = url + strlen(url);
@@ -37,14 +37,14 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 	if (eof_protocol == NULL) {
 		free(*result);
 		hurl_debug(__func__, "Could not find :// in URL.");
-		return 0;
+		return HURL_URL_PARSE_ERROR;
 	}
 
 	if (eof_protocol - url <= 0) {
 		/* Missing protocol. */
 		free(*result);
 		hurl_debug(__func__, "Could not find protocol in URL.");
-		return 0;
+		return HURL_URL_PARSE_ERROR;
 	}
 
 	(*result)->protocol = hurl_allocstrcpy(url, (size_t) (eof_protocol - url), 1);
@@ -53,7 +53,7 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 	if (strlen((*result)->protocol) + 3 == strlen(url)) {
 		hurl_parsed_url_free(*result);
 		hurl_debug(__func__, "Could not find hostname in URL.");
-		return 0;
+		return HURL_URL_PARSE_ERROR;
 	}
 	/* Find hostname */
 	bgof_hostname = eof_protocol + 3;
@@ -107,7 +107,7 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 		/* Empty hostname. */
 		hurl_parsed_url_free(*result);
 		hurl_debug(__func__, "Empty hostname.");
-		return 0;
+		return HURL_URL_PARSE_ERROR;
 	}
 	(*result)->hostname = hurl_allocstrcpy(bgof_hostname, (size_t) (eof_hostname - bgof_hostname), 1);
 
@@ -121,7 +121,7 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 	 hurl_debug(__func__, "Hostname: %s", (*result)->hostname);
 	 hurl_debug(__func__, "Path: %s", (*result)->path);
 	 */
-	return 1;
+	return HURL_URL_PARSE_OK;
 
 }
 
