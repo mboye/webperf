@@ -1,12 +1,10 @@
-/*
- * hurl_header.h
- *
- *  Created on: Jan 5, 2015
- *      Author: Magnus
- */
-
 #ifndef INCLUDE_HURL_HEADER_H_
 #define INCLUDE_HURL_HEADER_H_
+
+typedef struct hurl_header {
+	char *key, *value; /* key-value pair */
+	HURLHeader *previous, *next; /* Linked list pointers */
+} HURLHeader;
 
 /* Add header key-value pair to list of headers. */
 int hurl_header_add(HURLHeader **headers, char *key, char *value);

@@ -1,9 +1,3 @@
-/*
- * hurl_connection.c
- *
- *  Created on: Jan 5, 2015
- *      Author: Magnus
- */
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -20,6 +14,18 @@
 #include <openssl/rand.h>
 #include <openssl/x509v3.h>
 #endif
+
+void hurl_connection_free(HURLConnection *connection) {
+	if (connection->state != CONNECTION_STATE_CLOSED) {
+		if (connection->ssl_handle) {
+			SSL_free(connection->ssl_handle);
+		}
+		if (connection->ssl_context) {
+			SSL_CTX_free(connection->ssl_context);
+		}
+	}
+	free(connection);
+}
 
 void *hurl_connection_exec(void *connection_ptr) {
 	HURLConnection *connection = (HURLConnection *) connection_ptr;
