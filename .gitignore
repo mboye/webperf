@@ -27,3 +27,9 @@ examples/example1
 /debug
 .project
 .cproject
+bin/
+cscope.files
+gmock-1.7.0.zip
+gmock-1.7.0/
+tags
+update-tags.sh
