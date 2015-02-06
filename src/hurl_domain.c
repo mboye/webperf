@@ -1,3 +1,4 @@
+#include <hurl/hurl_domain.h>
 #include <stdlib.h>
 
 void *hurl_domain_exec(void *domain_ptr) {

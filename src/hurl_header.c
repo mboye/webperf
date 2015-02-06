@@ -1,9 +1,4 @@
-/*
- * hurl_header.c
- *
- *  Created on: Jan 5, 2015
- *      Author: Magnus
- */
+#include <hurl/hurl_headers.h>
 #include <stdlib.h>
 #include <limits.h>
 

@@ -1,9 +1,4 @@
-/*
- * hurl_path.c
- *
- *  Created on: Jan 5, 2015
- *      Author: Magnus
- */
+#include <hurl/hurl_path.h>
 #include <stdlib.h>
 
 void hurl_path_free(HURLManager *manager, HURLPath *path) {

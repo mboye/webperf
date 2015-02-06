@@ -1,3 +1,4 @@
+#include <hurl_dns.h>
 void hurl_resolve(HURLDomain *domain) {
 	struct addrinfo *resolver_result, *resolver_answer, resolver_hints;
 	int resolver_retval, i;

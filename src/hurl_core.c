@@ -17,7 +17,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "hurl_core.h"
+#include "hurl.h"
 
 #ifndef HURL_NO_SSL
 #include <openssl/ssl.h>
