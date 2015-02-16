@@ -8,7 +8,6 @@
 #include <hurl/parse.h>
 #include <hurl/path.h>
 #include <hurl/server.h>
-#include <hurl/manager.h>
 
 #ifndef HURL_NO_SSL
 #include <openssl/ssl.h>

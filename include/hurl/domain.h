@@ -1,4 +1,3 @@
-#include <hurl/domain.h>
 #include <hurl/server.h>
 #include <hurl/manager.h>
 #ifndef INCLUDE_HURL_DOMAIN_H_

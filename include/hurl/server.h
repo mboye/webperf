@@ -1,6 +1,9 @@
 #ifndef INCLUDE_HURL_SERVER_H_
 #define INCLUDE_HURL_SERVER_H_
 
+#include <hurl/path.h>
+
+typedef struct hurl_server HURLServer;
 typedef struct hurl_server {
 	HURLDomain *domain; /* Reverse pointer to domain. */
 	HURLServer *previous, *next; /* Linked list pointers. */

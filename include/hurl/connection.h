@@ -31,6 +31,6 @@ int hurl_connection_response(HURLConnection *connection,
 			     char **buffer,
 			     size_t *buffer_len,
 			     size_t *data_len,
-			     enum HTTPFeatureSupport *feature_persistence);
+			     HTTPFeatureSupport *feature_persistence);
 
 #endif /* INCLUDE_HURL_CONNECTION_H_ */
