@@ -1,5 +1,6 @@
-#include <hurl/hurl_domain.h>
 #include <stdlib.h>
+#include <math.h>
+#include <hurl.h>
 
 void *hurl_domain_exec(void *domain_ptr) {
 	HURLDomain *domain = (HURLDomain *) domain_ptr;
@@ -78,7 +79,7 @@ void hurl_domain_free(HURLManager *manager, HURLDomain *domain) {
 	free(domain);
 }
 
-int hurl_domain_nrof_paths(HURLDomain *domain, enum HURLDownloadState state) {
+int hurl_domain_nrof_paths(HURLDomain *domain, HURLDownloadState state) {
 	HURLServer *s;
 	HURLPath *p;
 	int count = 0;

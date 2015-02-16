@@ -19,32 +19,10 @@
 #include <unistd.h>
 #include "hurl.h"
 
-#ifndef HURL_NO_SSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/x509v3.h>
-#endif
-
-void *hurl_connection_exec(void *connection_ptr);
-HURLPath *hurl_server_dequeue(HURLServer *server);
-int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, size_t *buffer_len, size_t *data_len,
-		enum HTTPFeatureSupport *feature_persistence);
-int hurl_connection_request(HURLConnection *connection, HURLPath *path);
-void hurl_resolve(HURLDomain *domain); /* Default DNS resolution. */
-
-int hurl_header_str(HURLHeader *headers, char *buffer, size_t buffer_len);
-HURLHeader *hurl_headers_copy(HURLHeader *headers);
-
-/* unsigned int hurl_domain_nrof_paths(HURLDomain *domain); */
-ssize_t hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len);
-ssize_t hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len);
-
-int hurl_connect(HURLConnection *connection);
-void hurl_connection_close(HURLConnection *connection, enum HURLConnectionState state);
-int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain);
-unsigned char split_domain_name(char *name, char *labels[]);
-int hurl_parse_response_code(char *line, char **code_text);
 
 HURLManager *hurl_manager_init() {
 	HURLManager *manager;
@@ -290,7 +268,7 @@ HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, voi
 
 }
 
-int hurl_nrof_paths(HURLManager *manager, enum HURLDownloadState state) {
+int hurl_nrof_paths(HURLManager *manager, HURLDownloadState state) {
 	HURLDomain *d;
 	int count = 0;
 	d = manager->domains;
@@ -580,7 +558,7 @@ int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain) {
 }
 
 #endif
-void hurl_connection_close(HURLConnection *connection, enum HURLConnectionState state) {
+void hurl_connection_close(HURLConnection *connection, HURLConnectionState state) {
 	if (connection->state == CONNECTION_STATE_CLOSED || connection->state == CONNECTION_STATE_ERROR) {
 		/* The connection is already closed. */
 		return;

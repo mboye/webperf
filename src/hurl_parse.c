@@ -1,4 +1,4 @@
-#include <hurl/hurl_parse.h>
+#include <hurl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

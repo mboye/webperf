@@ -7,13 +7,13 @@
 #include <poll.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <assert.h>
 
-#ifndef HURL_NO_SSL
+#include "hurl.h" 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/x509v3.h>
-#endif
 
 void hurl_connection_free(HURLConnection *connection) {
 	if (connection->state != CONNECTION_STATE_CLOSED) {
@@ -36,7 +36,7 @@ void *hurl_connection_exec(void *connection_ptr) {
 	int connect_retval;
 	char *buffer = NULL;
 	size_t buffer_len = 0, data_len = 0;
-	enum HTTPFeatureSupport feature_persistence = UNKNOWN_SUPPORT, feature_pipelining = UNKNOWN_SUPPORT;
+	HTTPFeatureSupport feature_persistence = UNKNOWN_SUPPORT, feature_pipelining = UNKNOWN_SUPPORT;
 	unsigned int i;
 	HURLPath **queue;
 	unsigned int queue_len = 0;
@@ -459,7 +459,6 @@ int hurl_connect(HURLConnection *connection) {
 		}
 		hurl_debug(__func__, "[ %s:%u ]  Connected to server.", domain->domain, server->port);
 
-#ifndef HURL_NO_SSL
 		/* Switch to secure connection? */
 		if (connection->server->tls) {
 			hurl_debug(__func__, "Switching to TLS.");
@@ -598,7 +597,7 @@ int hurl_connect(HURLConnection *connection) {
 			/* Change connection state. */
 			connection->state = CONNECTION_STATE_CONNECTED;
 		}
-#endif
+
 		/* Record end of connect procedure. */
 		gettimeofday(&end_connect, NULL);
 
@@ -694,7 +693,7 @@ int hurl_connection_request(HURLConnection *connection, HURLPath *path) {
 }
 
 int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **buffer, size_t *buffer_len, size_t *data_len,
-		enum HTTPFeatureSupport *feature_persistence) {
+		HTTPFeatureSupport *feature_persistence) {
 	char *line;
 	ssize_t recv_len = 1; /* Set to 1 to enter receive loop first time */
 	char *eof_header = NULL;

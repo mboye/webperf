@@ -1,6 +1,4 @@
-#include <hurl/server.h>
-#include <hurl/path.h>
-#include <hurl/manager.h>
+#include <hurl.h>
 #include <stdlib.h>
 
 void hurl_server_free(HURLManager *manager, HURLServer *server) {
