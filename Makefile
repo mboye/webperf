@@ -8,7 +8,7 @@ endif
 
 SRCS = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
-CFLAGS += -Iinclude -g3
+CFLAGS += -Iinclude -fPIC -g3
 LIBS = -lssl -lcrypto
 
 all: libhurl.so libhurl.a
@@ -17,13 +17,13 @@ ut:
 	make -C ut
 
 libhurl.so: $(OBJS)
-	$(CC) -v $(CFLAGS) -Os -shared -fPIC -o libhurl.so $^ $(LIBS)
+	$(CC) -v $(CFLAGS) -Os -shared -o libhurl.so $^ $(LIBS)
 
 libhurl.a: $(OBJS)
 	ar rvs libhurl.a $(OBJS)
 
 debug: $(OBJS)
-	$(CC) $(CFLAGS) -g3 -shared -fPIC -o $@ $^ $(LIBS)
+	$(CC) $(CFLAGS) -g3 -shared -o $@ $^ $(LIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $^
