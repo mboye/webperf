@@ -397,15 +397,6 @@ int hurl_domain_nrof_paths(HURLDomain *domain, HURLDownloadState state);
 /* Count total number of paths in the HURL queue with a certain download state. */
 int hurl_nrof_paths(HURLManager *manager, HURLDownloadState state);
 
-/* Allocate memory and copy string to it. */
-char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding);
-
-/* Write debug line containing calling thread, function, and a message. */
-void hurl_debug(const char *func, const char *msg, ...);
-
-/* Print status of HURL execution. */
-void hurl_print_status(HURLManager *manager, FILE *fp);
-
 int hurl_parse_url(char *url, HURLParsedURL **result);
 
 void hurl_parsed_url_free(HURLParsedURL *url);
@@ -413,11 +404,19 @@ void hurl_parsed_url_free(HURLParsedURL *url);
 void hurl_path_free(HURLManager *manager, HURLPath *path);
 
 void hurl_server_free(HURLManager *manager, HURLServer *server);
+
 int hurl_verify_ssl_scope(char *expected_domain, char *actual_domain); 
+
 HURLHeader *hurl_headers_copy(HURLHeader *headers);
+
 int hurl_header_str(HURLHeader *headers, char *buffer, size_t buffer_len);
+
 ssize_t hurl_send(HURLConnection *connection, char *buffer, size_t buffer_len);
+
 ssize_t hurl_recv(HURLConnection *connection, char *buffer, size_t buffer_len);
+
 int hurl_parse_response_code(char *line, char **code_text);
+
 unsigned char split_domain_name(char *name, char *labels[]);
+
 #endif /* INCLUDE_HURL_H_ */

@@ -9,7 +9,8 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "hurl.h" 
+#include "hurl/hurl.h"
+#include "hurl/internal.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>

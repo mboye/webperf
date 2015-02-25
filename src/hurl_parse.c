@@ -1,4 +1,5 @@
-#include <hurl.h>
+#include <hurl/hurl.h>
+#include <hurl/internal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -124,4 +125,3 @@ int hurl_parse_url(char *url_ptr, HURLParsedURL **result) {
 	return HURL_URL_PARSE_OK;
 
 }
-

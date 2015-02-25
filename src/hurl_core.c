@@ -17,7 +17,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "hurl.h"
+#include "hurl/hurl.h"
+#include "hurl/internal.h"
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -56,31 +57,6 @@ HURLManager *hurl_manager_init() {
 		manager->ca_file = NULL;
 #endif
 		return manager;
-	} else {
-		return NULL;
-	}
-}
-
-void hurl_debug(const char *func, const char *msg, ...) {
-#ifndef NDEBUG
-	char template[1024];
-	va_list args;
-	snprintf(template, sizeof template, "[%u] %s(): %s\n", (unsigned int) pthread_self(), func, msg);
-	va_start(args, msg);
-	vfprintf(stderr, template, args);
-	va_end(args);
-	fflush(stderr);
-#endif
-}
-
-char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding) {
-	char *newstr;
-	if (str != NULL) {
-		if ((newstr = calloc(str_len + alloc_padding, sizeof(char))) == NULL) {
-			exit(EXIT_FAILURE);
-		}
-		memcpy(newstr, str, str_len);
-		return newstr;
 	} else {
 		return NULL;
 	}
@@ -167,7 +143,7 @@ HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, voi
 	HURLServer *server;
 	HURLPath *path, *p = NULL, *last = NULL;
 	int tls;
-	if (!hurl_parse_url(url, &parsed_url)) {
+	if (HURL_URL_PARSE_OK != hurl_parse_url(url, &parsed_url)) {
 		/* Failed to parse URL. */
 		return NULL;
 	}
@@ -682,5 +658,3 @@ void hurl_manager_free(HURLManager *manager) {
 	sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
 #endif
 }
-
-

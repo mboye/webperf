@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 extern "C" {
-#include <hurl_core.h>
+#include "hurl/hurl.h"
 }
 
 TEST(SupportedProtocols, URLParser) {

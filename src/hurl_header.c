@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <limits.h>
-#include <hurl.h>
+#include "hurl/hurl.h"
+#include "hurl/internal.h"
 
 void hurl_headers_free(HURLHeader *bgof_headers) {
 	HURLHeader *h = bgof_headers, *next;

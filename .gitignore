@@ -33,3 +33,4 @@ gmock-1.7.0.zip
 gmock-1.7.0/
 tags
 update-tags.sh
+/Debug/

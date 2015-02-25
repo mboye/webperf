@@ -1,4 +1,5 @@
-#include <hurl.h>
+#include "hurl/hurl.h"
+#include "hurl/internal.h"
 #include <stdlib.h>
 
 void hurl_path_free(HURLManager *manager, HURLPath *path) {

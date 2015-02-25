@@ -1,8 +1,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netdb.h> 
+#include <netdb.h>
 #include <arpa/inet.h>
-#include <hurl.h>
+#include "hurl/hurl.h"
+#include "hurl/internal.h"
 
 void hurl_resolve(HURLDomain *domain) {
 	struct addrinfo *resolver_result, *resolver_answer, resolver_hints;

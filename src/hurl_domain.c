@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
-#include <hurl.h>
+#include "hurl/hurl.h"
+#include "hurl/internal.h"
 
 void *hurl_domain_exec(void *domain_ptr) {
 	HURLDomain *domain = (HURLDomain *) domain_ptr;
