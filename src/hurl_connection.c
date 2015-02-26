@@ -939,8 +939,10 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 									hurl_debug(__func__, "Failed to add redirect to download queue.");
 								} else {
 									/* The path was added, to fix tag */
-									path_created->tag = !manager->retag ? path->tag : manager->retag(path_created, path, redirect_url);
 									path_created->redirect_count = path->redirect_count + 1;
+									path_created->redirector = path;
+                                    path_created->tag = !manager->retag ? path->tag : manager->retag(path_created, redirect_url);
+									
 								}
 							}
 						} else {

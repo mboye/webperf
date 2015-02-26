@@ -1,4 +1,4 @@
-CC=/usr/bin/gcc -Wall -pedantic -std=gnu99
+CC=gcc -Wall -pedantic -std=gnu99
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -20,7 +20,7 @@ libhurl.so: $(OBJS)
 	$(CC) -v $(CFLAGS) -Os -shared -fPIC -o libhurl.so $^ $(LIBS)
 
 libhurl.a: $(OBJS)
-	ar rvs lib/libhurl.a $(OBJS)
+	ar rvs libhurl.a $(OBJS)
 
 debug: $(OBJS)
 	$(CC) $(CFLAGS) -g3 -shared -fPIC -o $@ $^ $(LIBS)

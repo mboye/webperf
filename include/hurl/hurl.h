@@ -127,6 +127,7 @@ struct hurl_path {
     struct timeval request_sent; /* When was a GET request sent for this path. */
     struct timeval response_received; /* When was the response to the GET request received. */
     int redirect_count; /* Number of redirects that have been followed. */
+    HURLPath *redirector;
 };
 
 struct hurl_server {
@@ -297,7 +298,7 @@ struct hurl_manager {
                                     -- The path that was redirected.
                                     -- The absolute redirection URL.
     */
-    void *(*retag)(HURLPath *, HURLPath *, char *);
+    void *(*retag)(HURLPath *, char *);
 
     /* FREE TAG HOOK
     *  Event:     HURL is cleaning up memory.
