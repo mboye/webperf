@@ -138,12 +138,13 @@ HURLServer *hurl_get_server(HURLDomain *domain, unsigned short port, int tls) {
 }
 
 HURLPath *hurl_add_url(HURLManager *manager, int allow_duplicate, char *url, void *tag) {
+	hurl_url_parser_error_t parser_rc;
 	HURLParsedURL *parsed_url;
 	HURLDomain *domain;
 	HURLServer *server;
 	HURLPath *path, *p = NULL, *last = NULL;
 	int tls;
-	if (HURL_URL_PARSE_OK != hurl_parse_url(url, &parsed_url)) {
+	if ((parser_rc = hurl_parse_url(url, &parsed_url)) != HURL_URL_PARSER_ERROR_NONE) {
 		/* Failed to parse URL. */
 		return NULL;
 	}

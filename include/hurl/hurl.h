@@ -40,6 +40,16 @@ typedef struct hurl_pipeline_queue HURLPipelineQueue;
 typedef struct hurl_parsed_url HURLParsedURL;
 
 /* enums */
+enum hurl_url_parser_error_e {
+	HURL_URL_PARSER_ERROR_NONE,
+	HURL_URL_PARSER_ERROR_MEMORY,
+	HURL_URL_PARSER_ERROR_PROTOCOL_DELIM,
+	HURL_URL_PARSER_ERROR_PROTOCOL,
+	HURL_URL_PARSER_HOSTNAME,
+	HURL_URL_PARSER_ERROR_PORT,
+	HURL_URL_PARSER_HOSTNAME_LENGTH
+};
+
 enum hurl_http_feature_support {
     SUPPORTED, UNSUPPORTED, UNKNOWN_SUPPORT
 };
@@ -93,6 +103,7 @@ enum hurl_server_state {
 }; 
 
 /* typedefs for enums */
+typedef enum hurl_url_parser_error_e hurl_url_parser_error_t;
 typedef enum hurl_connection_state HURLConnectionState;
 typedef enum hurl_dns_state HURLDNSState;
 typedef enum hurl_connect_result HURLConnectResult;
@@ -398,7 +409,7 @@ int hurl_domain_nrof_paths(HURLDomain *domain, HURLDownloadState state);
 /* Count total number of paths in the HURL queue with a certain download state. */
 int hurl_nrof_paths(HURLManager *manager, HURLDownloadState state);
 
-int hurl_parse_url(char *url, HURLParsedURL **result);
+hurl_url_parser_error_t hurl_parse_url(char *url, HURLParsedURL **result);
 
 void hurl_parsed_url_free(HURLParsedURL *url);
 
