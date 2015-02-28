@@ -1,4 +1,4 @@
-CC=gcc -Wall -pedantic -std=gnu99
+CC=gcc
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -8,8 +8,14 @@ endif
 
 SRCS = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
-CFLAGS += -Iinclude -fPIC -g3
+CFLAGS +=  -Wall -pedantic -std=gnu99 -Iinclude -fPIC
 LIBS = -lssl -lcrypto
+
+ifeq ($(DEBUG), YES)
+	CFLAGS += -g3
+else
+	CFLAGS += -Os
+endif
 
 all: libhurl.so libhurl.a
 
@@ -17,13 +23,10 @@ ut:
 	make -C ut
 
 libhurl.so: $(OBJS)
-	$(CC) -v $(CFLAGS) -Os -shared -o libhurl.so $^ $(LIBS)
+	$(CC) -v $(CFLAGS) -shared -o libhurl.so $^ $(LIBS)
 
 libhurl.a: $(OBJS)
 	ar rvs libhurl.a $(OBJS)
-
-debug: $(OBJS)
-	$(CC) $(CFLAGS) -g3 -shared -o $@ $^ $(LIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $^
