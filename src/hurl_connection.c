@@ -941,6 +941,7 @@ int hurl_connection_response(HURLConnection *connection, HURLPath *path, char **
 									/* The path was added, to fix tag */
 									path_created->redirect_count = path->redirect_count + 1;
 									path_created->redirector = path;
+									path->redirectee = path_created;
                                     path_created->tag = !manager->retag ? path->tag : manager->retag(path_created, redirect_url);
 									
 								}

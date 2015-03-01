@@ -139,6 +139,7 @@ struct hurl_path {
     struct timeval response_received; /* When was the response to the GET request received. */
     int redirect_count; /* Number of redirects that have been followed. */
     HURLPath *redirector;
+    HURLPath *redirectee;
 };
 
 struct hurl_server {
