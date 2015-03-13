@@ -659,3 +659,12 @@ void hurl_manager_free(HURLManager *manager) {
 	sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
 #endif
 }
+
+float record_time_msec(struct timeval *begin)
+{
+    struct timeval end;
+    struct timeval diff;
+    gettimeofday(&end, NULL);
+    timersub(&end, begin, &diff);
+    return timeval_to_msec(&diff);
+}

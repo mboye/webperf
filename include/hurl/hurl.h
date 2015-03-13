@@ -432,4 +432,6 @@ int hurl_parse_response_code(char *line, char **code_text);
 
 unsigned char split_domain_name(char *name, char *labels[]);
 
+float record_time_msec(struct timeval *begin);
+
 #endif /* INCLUDE_HURL_H_ */

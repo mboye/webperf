@@ -7,4 +7,6 @@ void hurl_debug(const char *func, const char *msg, ...);
 
 void hurl_print_status(HURLManager *manager, FILE *fp);
 
+#define FOREACH(type, var, head) for (type* var = head; var != NULL; var = var->next)
+
 #endif /* INCLUDE_HURL_INTERNAL__H_ */
