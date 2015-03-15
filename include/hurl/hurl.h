@@ -102,6 +102,11 @@ enum hurl_server_state {
     SERVER_STATE_SSL_ERROR = -2 /* Failed to secure connection. */
 }; 
 
+enum hurl_hook_error_e {
+    HURL_HOOK_OK,
+    HURL_HOOK_ERROR
+};
+
 /* typedefs for enums */
 typedef enum hurl_url_parser_error_e hurl_url_parser_error_t;
 typedef enum hurl_connection_state HURLConnectionState;
@@ -111,6 +116,7 @@ typedef enum hurl_http_feature_support HTTPFeatureSupport;
 typedef enum hurl_download_state HURLDownloadState;
 typedef enum hurl_transfer_result HURLTransferResult;
 typedef enum hurl_server_state HURLServerState;
+typedef enum hurl_hook_error_e hurl_hook_error_t;
 
 /* structs */
 struct hurl_connection {

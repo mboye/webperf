@@ -122,10 +122,14 @@ void *hurl_connection_exec(void *connection_ptr) {
     /* As long as there are files to download. */
     while (path != NULL) {
         /* Call pre-connect hook */
-        if (manager->hook_pre_connect != NULL && !manager->hook_pre_connect(path, connection)) {
-            /* Do not connect to this server. */
-            path = hurl_server_dequeue(server);
-            continue;
+        if (manager->hook_pre_connect) {
+           hurl_hook_error_t rc = manager->hook_pre_connect(path, connection);
+
+           if (HURL_HOOK_ERROR == rc) {
+               /* Do not connect to this server. */
+               path = hurl_server_dequeue(server);
+               continue;
+           }
         }
         /* Connect to server. */
         if ((connect_retval = hurl_connect(connection)) != CONNECTION_ERROR) {
