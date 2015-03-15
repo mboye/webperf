@@ -42,7 +42,7 @@ int pre_connect(HURLConnection *connection, HURLPath *path)
         domain->dns_trigger = path;
         gettimeofday(&domain->bgof_resolution, NULL);
 
-        if (!manager->hook_resolve) {
+        if (manager->hook_resolve) {
             manager->hook_resolve(domain, path);
         } else {
             hurl_resolve(domain);
