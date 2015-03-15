@@ -1,4 +1,4 @@
-CC=gcc
+CC ?= gcc
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -8,7 +8,7 @@ endif
 
 SRCS = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
-CFLAGS +=  -Wall -pedantic -std=gnu99 -Iinclude -fPIC
+CFLAGS += -Wall -pedantic -std=gnu99 -Iinclude -fPIC
 LIBS = -lssl -lcrypto
 
 ifeq ($(DEBUG), YES)
