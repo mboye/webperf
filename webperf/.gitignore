@@ -1,5 +1,6 @@
-x86
 .project
 .cproject
-mips
-debug
+.metadata
+# Ignore build results
+leone-webperf
+*.o
