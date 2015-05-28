@@ -52,10 +52,12 @@ void signal_handler(int signum,
 #endif
 #endif
     log_debug(__func__, "Signal: %d. Aborting...", signum);
-    char *fn;
+    char *fn = NULL;
     /* Print statistics for all elements. */
     if (test != NULL && test->always_print_output)
     {
+        /* The following call will not do anything useful:
+           should set fn to something sensible. */
         print_results(test, -signum, fn);
     }
 #ifdef AUTO_STACKTRACE

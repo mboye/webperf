@@ -37,6 +37,12 @@ void print_results(WebperfTest *test,
     const char *nwp_str;
     char *jsonfn, *csvfn;
 
+    if (!filename)
+    {
+        log_debug(__func__, "filename == NULL, something is wrong.");
+        return;
+    }
+
     /* Is JSON output format enabled? */
     if (test->stats.output_format & FORMAT_JSON)
     {
