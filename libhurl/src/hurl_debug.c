@@ -4,11 +4,19 @@
 #include <string.h>
 #include <pthread.h>
 
-void hurl_debug(const char *func, const char *msg, ...) {
+void hurl_debug(const char *func,
+                const char *msg,
+                ...)
+{
 #ifndef NDEBUG
     char template[1024];
     va_list args;
-    snprintf(template, sizeof template, "[%u] %s(): %s\n", (unsigned int) pthread_self(), func, msg);
+    snprintf(template,
+             sizeof template,
+             "[%u] %s(): %s\n",
+             (unsigned int )pthread_self(),
+             func,
+             msg);
     va_start(args, msg);
     vfprintf(stderr, template, args);
     va_end(args);
@@ -16,15 +24,22 @@ void hurl_debug(const char *func, const char *msg, ...) {
 #endif
 }
 
-char *hurl_allocstrcpy(char *str, size_t str_len, unsigned int alloc_padding) {
+char *hurl_allocstrcpy(char *str,
+                       size_t str_len,
+                       unsigned int alloc_padding)
+{
     char *newstr;
-    if (str != NULL) {
-        if ((newstr = calloc(str_len + alloc_padding, sizeof(char))) == NULL) {
+    if (str != NULL)
+    {
+        if ((newstr = calloc(str_len + alloc_padding, sizeof(char))) == NULL)
+        {
             exit(EXIT_FAILURE);
         }
         memcpy(newstr, str, str_len);
         return newstr;
-    } else {
+    }
+    else
+    {
         return NULL;
     }
 }

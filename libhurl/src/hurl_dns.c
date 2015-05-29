@@ -5,7 +5,8 @@
 #include "hurl/hurl.h"
 #include "hurl/internal.h"
 
-struct addrinfo resolver_hints_init() {
+struct addrinfo resolver_hints_init()
+{
     struct addrinfo hints = {
         .ai_family = AF_UNSPEC,
         .ai_socktype = SOCK_STREAM,
@@ -18,21 +19,24 @@ struct addrinfo resolver_hints_init() {
     return hints;
 }
 
-void hurl_resolve(HURLDomain *domain) {
+void hurl_resolve(HURLDomain *domain)
+{
     struct addrinfo *records, *r;
     struct addrinfo resolver_hints = resolver_hints_init();
 
-    int rc = getaddrinfo(domain->domain, NULL, &resolver_hints, &records); 
-    if (rc != 0) {
+    int rc = getaddrinfo(domain->domain, NULL, &resolver_hints, &records);
+    if (rc != 0)
+    {
         hurl_debug(__func__, "[ %s ] Resolver error: %s", domain->domain,
-                                                          gai_strerror(rc));
+                   gai_strerror(rc));
         domain->dns_state = DNS_STATE_ERROR;
         return;
     }
 
     domain->nrof_addresses = 0;
     r = records;
-    while (r != NULL) {
+    while (r != NULL)
+    {
         domain->nrof_addresses++;
         r = r->ai_next;
     }
@@ -42,19 +46,23 @@ void hurl_resolve(HURLDomain *domain) {
                domain->domain,
                domain->nrof_addresses);
 
-    if (domain->nrof_addresses > 0) {
+    if (domain->nrof_addresses > 0)
+    {
         domain->addresses = calloc(domain->nrof_addresses,
                                    sizeof(struct sockaddr *));
-        if (!domain->addresses) {
+        if (!domain->addresses)
+        {
             domain->dns_state = DNS_STATE_ERROR;
             return;
         }
 
         int i = 0;
         r = records;
-        while (r != NULL) {
+        while (r != NULL)
+        {
             domain->addresses[i] = calloc(1, sizeof(struct sockaddr));
-            if (!domain->addresses[i]) {
+            if (!domain->addresses[i])
+            {
                 domain->dns_state = DNS_STATE_ERROR;
                 return;
             }
@@ -62,13 +70,16 @@ void hurl_resolve(HURLDomain *domain) {
             memcpy(domain->addresses[i++], r->ai_addr, sizeof(struct sockaddr));
 
             char address_str[INET6_ADDRSTRLEN];
-            if (AF_INET == r->ai_addr->sa_family) {
+            if (AF_INET == r->ai_addr->sa_family)
+            {
                 const void* addr =
-                    &((struct sockaddr_in *) r->ai_addr)->sin_addr;
+                    &((struct sockaddr_in *)r->ai_addr)->sin_addr;
                 inet_ntop(AF_INET, addr, address_str, INET6_ADDRSTRLEN);
-            } else {
+            }
+            else
+            {
                 const void* addr =
-                    &((struct sockaddr_in6*) r->ai_addr)->sin6_addr;
+                    &((struct sockaddr_in6*)r->ai_addr)->sin6_addr;
                 inet_ntop(AF_INET6, addr, address_str, INET6_ADDRSTRLEN);
             }
 
@@ -78,21 +89,26 @@ void hurl_resolve(HURLDomain *domain) {
 
         freeaddrinfo(records);
         domain->dns_state = DNS_STATE_RESOLVED;
-    } else {
+    }
+    else
+    {
         domain->dns_state = DNS_STATE_ERROR;
     }
 }
 
-
-unsigned char split_domain_name(char *name, char *labels[]) {
+unsigned char split_domain_name(char *name,
+                                char *labels[])
+{
     unsigned char nrof_labels = 0;
     char *name_copy = strdup(name);
     char *tmp = name_copy;
-    char *progress ;
+    char *progress;
     char *label;
 
-    while ((label = strtok_r(tmp, ".", &progress)) != NULL) {
-        if (nrof_labels == 127) {
+    while ((label = strtok_r(tmp, ".", &progress)) != NULL)
+    {
+        if (nrof_labels == 127)
+        {
             break;
         }
 

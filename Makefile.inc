@@ -6,7 +6,7 @@ INCLUDES = -I../leone-tools \
 
 LD_PATHS = -L../leone-tools \
            -L../leone-dns-library \
-   -L../libhurl
+           -L../libhurl
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -14,7 +14,7 @@ ifeq ($(UNAME_S),Darwin)
     CFLAGS += -Wno-deprecated-declarations
 endif
 
-ifeq ($(DEBUG), yes)
+ifeq ($(DEBUG), YES)
     CFLAGS += -g3
 else
     CFLAGS += -Os

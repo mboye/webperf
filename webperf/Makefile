@@ -43,4 +43,5 @@ clean:
 	rm -f $(OBJS)
 	rm -f leone-webperf
 
-FORCE: functional-test
+FORCE:
+	
