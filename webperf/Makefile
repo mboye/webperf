@@ -37,11 +37,10 @@ libhurl.a:
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $^
 
 functional-test: FORCE
-	$(foreach test, $(wildcard ./ft/test_*), $(test)/test.sh)
+	./ft/run-all-tests.sh
 
 clean:
 	rm -f $(OBJS)
 	rm -f leone-webperf
 
-FORCE:
-
+FORCE: functional-test

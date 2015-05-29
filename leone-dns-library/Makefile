@@ -3,7 +3,7 @@ include ../Makefile.inc
 SRCS = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 INCLUDES = -I include \
-		   -I ../leone-tools/include
+           -I ../leone-tools/include
 
 LIBS = -lm \
        -lleonetools

@@ -34,3 +34,8 @@ gmock-1.7.0/
 tags
 update-tags.sh
 /Debug/
+
+#Test output files
+*.stderr
+*.stdout
+*.output

@@ -1,6 +1,6 @@
 #!/bin/bash
 GET_URLS=../common/get_urls.js
-URLS=tmp/urls.txt
+URLS=/proj/webperf/ft/google_ncr.urls
 
 if [ $# -ne 1 ]; then
 	echo "Usage: update_urls.bash <URL>"

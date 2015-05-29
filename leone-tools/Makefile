@@ -1,4 +1,5 @@
 include ../Makefile.inc
+
 SRCS = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 LIBS = -lm

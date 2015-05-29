@@ -15,7 +15,7 @@ libleonedns.so: libleonetools.so
 libleonetools.so:
 	make -C leone-tools
 
-functional-test:
+functional-test: FORCE
 	make -C webperf functional-test
 
 gerrit-check: clean webperf functional-test
@@ -25,3 +25,6 @@ clean:
 	make -C leone-dns-library clean
 	make -C webperf clean
 	test -d libhurl && make -C libhurl clean
+
+FORCE:
+
