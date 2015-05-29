@@ -578,8 +578,7 @@ char *json_escape(char *str) {
 	return result;
 }
 
-void *duplicate_element_stat(HURLPath *new_path, HURLPath *redirector,
-		char *destination_url) {
+void *duplicate_element_stat(HURLPath *new_path, char *destination_url) {
 	hurl_url_parser_error_t parser_rc;
 	HURLParsedURL *parsed_url;
 	ElementStat *stat = calloc(1, sizeof(ElementStat));

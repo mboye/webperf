@@ -190,7 +190,7 @@ char *strptime(const char *s, const char *format, struct tm *tm);
 void print_stat(WebperfTest *test, ElementStat *stat);
 void print_results(WebperfTest *test, int interrupted, char *filename);
 
-void *duplicate_element_stat(HURLPath *new_path, HURLPath *redirector, char *destination_url);
+void *duplicate_element_stat(HURLPath *new_path, char *destination_url);
 void element_url_hash(ElementStat *element, HURLPath *path);
 void stat_free(void *s);
 

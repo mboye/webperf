@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 	test->manager->retag = duplicate_element_stat;
 	test->manager->free_tag = stat_free;
 
-	test->dns_query_type = IPv4;
+	test->dns_query_type = A;
 
 	/* Initialize DNS cache. */
 	test->cache = dns_cache_init();
@@ -802,7 +802,7 @@ int print_usage(int retval) {
 }
 
 int parse_int(char *value_str, int *result, int min) {
-	int value = strtol(value_str, NULL, 10);
+	long value = strtol(value_str, NULL, 10);
 	if (value == LONG_MIN || value == LONG_MAX || value < min) {
 		/* Value is out of range. */
 		return 0;
@@ -812,8 +812,8 @@ int parse_int(char *value_str, int *result, int min) {
 	}
 }
 int parse_uint(char *value_str, unsigned int *result, unsigned int min) {
-	unsigned int value = strtoul(value_str, NULL, 10);
-	if (value == LONG_MIN || value == LONG_MAX || value < min) {
+	unsigned long value = strtoul(value_str, NULL, 10);
+	if (value == ULONG_MAX || value < min) {
 		/* Value is out of range. */
 		return 0;
 	} else {
@@ -948,7 +948,7 @@ void test_free() {
 void *timeout_killer(void *arg) {
 	//how to pass argument for
 	unsigned int sleep_time = *((unsigned int *) arg);
-	char *fn = *((char *) arg);
+	char *fn = arg;
 	log_debug(__func__, "Killer thread started. Waiting %u seconds before calling exit()", sleep_time);
 	sleep(sleep_time);
 	log_debug(__func__, "Execution timeout. Calling exit()");
