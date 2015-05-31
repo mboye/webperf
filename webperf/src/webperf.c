@@ -797,7 +797,7 @@ int main(int argc, char *argv[]) {
 }
 
 int print_usage(int retval) {
-	printf("Usage:\t%s <test.conf>\n", cmd);
+	printf("Usage:\t%s <test.conf> <output.json>\n", cmd);
 	return retval;
 }
 
