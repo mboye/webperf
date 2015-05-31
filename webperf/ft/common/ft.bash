@@ -14,13 +14,17 @@ update_urls() {
     local file="$2"
     local max_age=3600
 
-    local created=$(date -r "$file" +%s)
-    local now=$(date +%s)
-    local diff=$((now-created))
+    if [ -f "$file" ]; then
+        local created=$(date -r "$file" +%s)
+        local now=$(date +%s)
+        local diff=$((now-created))
 
-    local update=0
-    [ "$diff" -gt "${max_age}" ] && update=1
-    [ $(wc -l $file | cut -d' ' -f1) -eq 0 ] && update=1
+        local update=0
+        [ "$diff" -gt "${max_age}" ] && update=1
+        [ $(wc -l $file | cut -d' ' -f1) -eq 0 ] && update=1
+    else
+        update=1
+    fi
 
     if [ $update -eq 1 ]; then
         echo "Updating target elements of '$url' ..."
