@@ -15,6 +15,11 @@ libleonedns.so: libleonetools.so
 libleonetools.so:
 	make -C leone-tools
 
+functional-test:
+	make -C webperf functional-test
+
+gerrit-check: clean webperf functional-test
+
 clean:
 	make -C leone-tools clean
 	make -C leone-dns-library clean

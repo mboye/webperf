@@ -7,13 +7,13 @@ DEP_OBJS += $(wildcard ../leone-tools/src/*.o)
 DEP_OBJS += $(wildcard ../leone-dns-library/src/*.o)
 
 INCLUDES = -I include \
-		   -I ../leone-dns-library/include \
-		   -I ../leone-tools/include \
-		   -I ../libhurl/include
+           -I ../leone-dns-library/include \
+           -I ../leone-tools/include \
+           -I ../libhurl/include
 
 LIBS = -lm \
-	   -lssl \
-	   -lcrypto \
+       -lssl \
+       -lcrypto \
 
 ifeq ($(UNAME_S),Linux)
     LIBS += -pthread
@@ -36,8 +36,8 @@ libhurl.a:
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $^
 
-ft: FORCE
-	make -C ft
+functional-test: FORCE
+	$(foreach test, $(wildcard ./ft/test_*), $(test)/test.sh)
 
 clean:
 	rm -f $(OBJS)
