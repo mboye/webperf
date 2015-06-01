@@ -1,0 +1,5 @@
+#!/bin/bash
+for file in $(git diff --name-only HEAD~1..HEAD)
+do
+    egrep -Hn "\s+$" "$file" | cut -d: -f1-2 | awk '{ printf("%s:%s\n", $0, "Trailing whitespace.") }'
+done
