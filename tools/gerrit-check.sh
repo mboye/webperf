@@ -4,6 +4,7 @@ cd $WORKSPACE
 
 code_review=0
 verified=-1
+
 COMMENTS="$WORKSPACE/review-comments.txt"
 
 git log -1
@@ -15,7 +16,7 @@ fi
 
 export CC=clang
 export CFLAGS="-Weverything -Wno-padded"
-if make gerrit-check
+if make webperf/webperf && $WORKSPACE/webperf/ft/run-all-tests.sh
 then
     verified=1
 fi
@@ -26,3 +27,10 @@ export CODE_REVIEW=$code_review
 export VERIFIED=$verified
 
 cat $COMMENTS | $WORKSPACE/tools/gerrit/gerrit-post-review.py
+
+if [ $verified -eq -1 ]
+then
+    exit 1
+else
+    exit 0
+fi

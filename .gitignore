@@ -14,6 +14,12 @@
 *.so.*
 *.dylib
 
+# Build system
+*.d
+.dns
+.tools
+.hurl
+
 # Executables
 *.exe
 *.out
@@ -21,7 +27,7 @@
 *.i*86
 *.x86_64
 *.hex
-examples/example1
+webperf/webperf
 
 #Eclipse
 /debug

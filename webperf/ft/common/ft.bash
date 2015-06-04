@@ -1,6 +1,6 @@
 #!/bin/bash
 ROOT="$(git rev-parse --show-toplevel)"
-WEBPERF="$ROOT/webperf/leone-webperf"
+WEBPERF="$ROOT/webperf/webperf"
 FT="$ROOT/webperf/ft"
 FT_COMMON="$FT/common"
 
