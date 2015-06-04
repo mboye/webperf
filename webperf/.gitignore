@@ -1,6 +1,0 @@
-.project
-.cproject
-.metadata
-# Ignore build results
-leone-webperf
-*.o
