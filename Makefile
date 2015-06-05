@@ -1,5 +1,5 @@
 CC ?= clang
-override CFLAGS += -Wall -pedantic -std=gnu99
+override CFLAGS += -Wall -Wextra -pedantic -std=gnu99
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
