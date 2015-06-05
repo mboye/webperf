@@ -77,7 +77,7 @@ void dns_cache_node_free(DNSMessage *node)
 int dns_trail(char *domain,
               char **domain_trail)
 {
-    int i;
+    unsigned int i;
     for (i = 0; domain_trail[i] != NULL && i < DNS_MAX_DOMAINS; i++)
     {
         if (strcasecmp(domain_trail[i], domain) == 0)
@@ -96,7 +96,7 @@ int dns_trail(char *domain,
 
 void dns_trail_free(char **domain_trail)
 {
-    int i;
+    unsigned int i;
     for (i = 0; domain_trail[i] != NULL && i < DNS_MAX_DOMAINS; i++)
     {
         free(domain_trail[i]);
@@ -1082,9 +1082,9 @@ char *dns_message_fqdn(DNSMessage *message)
     return realloc(result, len + 1);
 }
 
-void skip_line(char *buf,
-               unsigned int buf_len,
-               int *pos)
+void skip_line(char*  buf,
+               off_t  buf_len,
+               off_t* pos)
 {
     while (*pos < buf_len && buf[*pos] != '\n')
     {

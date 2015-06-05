@@ -145,7 +145,7 @@ int dns_cache_load(DNSCache **cache,
 {
     struct stat conf_st;
     char *buf;
-    int fd, i, j, nrof_nodes = 0;
+    int fd, nrof_nodes = 0;
     DNSRecord *record;
     char af;
     int pton_retval;
@@ -154,6 +154,7 @@ int dns_cache_load(DNSCache **cache,
     char type[8], name[256], rdata[256];
     char ip_address[16];
     int line_count = 1;
+
     if (conf != NULL)
     {
         /* Initialize cache if necessary. */
@@ -191,7 +192,7 @@ int dns_cache_load(DNSCache **cache,
             return DNS_ERROR;
         }
         nrof_nodes = 0;
-        i = 0;
+        off_t i = 0;
         while (i < conf_st.st_size && nrof_nodes < DNS_MAX_ROOT_SERVERS)
         {
             /* Configuration format: "NS google-public-dns-a.google.com
@@ -206,7 +207,8 @@ int dns_cache_load(DNSCache **cache,
             bzero(type, sizeof(type));
             bzero(name, sizeof(name));
             bzero(rdata, sizeof(rdata));
-            j = 0;
+
+            unsigned int j = 0;
             /* Read record type. */
             while (j < sizeof(type) && i < conf_st.st_size)
             {

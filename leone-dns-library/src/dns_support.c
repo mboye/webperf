@@ -22,7 +22,6 @@ int dns_load_resolv_conf(DNSCache *cache,
     char *resolvbuf;
     int resolv_fd;
     struct buffer *buf;
-    int i;
     int pton, af;
     char *record_name, record_addr[16];
     DNSRecord *record;
@@ -54,7 +53,10 @@ int dns_load_resolv_conf(DNSCache *cache,
         log_debug(__func__, "Failed to read list of name servers.");
         return DNS_ERROR;
     }
+
     buffer_init(&buf, 1024, 128);
+    off_t i = 0;
+
     for (i = 0; i < resolv_st.st_size; i++)
     {
         if (resolvbuf[i] == '#')

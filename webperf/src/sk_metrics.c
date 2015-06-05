@@ -12,7 +12,7 @@
 float median_float(float *values,
                    unsigned int n)
 {
-    int i, j;
+    unsigned int i, j;
     float *sorted = malloc(sizeof(float) * n);
     float tmp;
 
@@ -48,7 +48,7 @@ float median_float(float *values,
 float median_int(int *values,
                  unsigned int n)
 {
-    int i, j;
+    unsigned int i, j;
     int *sorted = malloc(sizeof(int) * n);
     int tmp;
 
@@ -88,12 +88,12 @@ void print_sk_metrics_csv(WebperfTest *test,
     Buffer *csvbuf, *csvheader;
     ElementStat *e;
     char **dns_ok_hashes = calloc(test->nrof_elements, sizeof(char *));
-    int i = 0;
+    unsigned int i = 0;
     int test_status = 0;
     char *first_server = "";
     DNSRecord *dns_server = NULL;
     CDNProvider cdn;
-    int dns_ok_hashes_n = 0;
+    unsigned int dns_ok_hashes_n = 0;
 
     buffer_init(&csvbuf, 1024, 128);
     buffer_init(&csvheader, 1024, 128);

@@ -20,7 +20,7 @@
 
 char *json_escape(char *str);
 char *cutoff(char *str,
-             int maxlen);
+             unsigned int maxlen);
 
 /* This is main function for printing measurement results. */
 void print_results(WebperfTest *test,
@@ -197,7 +197,7 @@ void write_out(char *filename,
 }
 
 char *cutoff(char *str,
-             int maxlen)
+             unsigned int maxlen)
 {
     unsigned int len = strlen(str);
     if (maxlen > 0)
@@ -695,7 +695,7 @@ char *json_escape(char *str)
 {
     Buffer *buf;
     char *result;
-    int i;
+    unsigned int i;
 
     if (str == NULL)
     {

@@ -34,8 +34,10 @@ void stat_body_recv(HURLPath *path,
 int stat_send_request(HURLPath *path,
                       HURLConnection *connection,
                       int pipelined);
-int stat_pre_connect(HURLPath *path,
-                     HURLConnection *connection);
+
+hurl_hook_error_t stat_pre_connect(HURLPath *path,
+                                   HURLConnection *connection);
+
 void stat_post_connect(HURLPath *path,
                        HURLConnection *connection,
                        int retval);

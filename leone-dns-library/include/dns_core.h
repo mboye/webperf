@@ -261,9 +261,10 @@ void dns_cache_free(DNSCache *cache);
 
 void dns_cache_node_free(DNSMessage *node);
 
-void skip_line(char *buf,
-               unsigned int buf_len,
-               int *pos);
+void skip_line(char*  buf,
+               off_t  buf_len,
+               off_t* pos);
+
 int dns_resolver_ready(DNSResolverState *state);
 
 /* Functions for presenting DNS information. */

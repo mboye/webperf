@@ -1,4 +1,4 @@
-#include "hurl/hurl.h" 
+#include "hurl/hurl.h"
 #include <string.h>
 #include <dns_support.h>
 #include <fcntl.h>
@@ -538,7 +538,7 @@ void stat_transfer_complete(HURLPath *path,
     /* Save tranfer result code */
     stat->http->result = result;
 
-#ifdef __linux__ 
+#ifdef __linux__
     if (test->stats.http.tcp_stats)
     {
         if ((stat->http->tcp_stats = calloc(1, sizeof(struct tcp_info))) != NULL)
@@ -692,7 +692,8 @@ void stat_body_recv(HURLPath *path,
         {
             /* log_debug(__func__, "Trying to write %d bytes to file.", data_len); */
             /* Write data */
-            if (write(stat->fp, data, data_len) != data_len)
+            ssize_t write_len = write(stat->fp, data, data_len);
+            if (write_len != (ssize_t)data_len)
             {
                 log_debug(__func__,
                           "Failed to write to '%s': %s",
