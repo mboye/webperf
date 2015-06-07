@@ -231,8 +231,8 @@ struct hurl_manager
      *  Parameters:    -- Path being downloaded which triggered the event.
      -- Parameters of the connection that will be established.
      */
-    int (*hook_pre_connect)(HURLPath *,
-                            HURLConnection *); /* Hook before calling connect() */
+    hurl_hook_error_t (*hook_pre_connect)(HURLPath *,
+                                          HURLConnection *); /* Hook before calling connect() */
 
     /* POST-CONNECT HOOK
      *  Event: HURL has attempted to connect to a server.

@@ -86,8 +86,8 @@ int stat_redirect(HURLPath *path,
     return test->manager->follow_redirect;
 }
 
-int stat_pre_connect(HURLPath *path,
-                     HURLConnection *connection)
+hurl_hook_error_t stat_pre_connect(HURLPath *path,
+                                   HURLConnection *connection)
 {
     ElementStat *stat = (ElementStat *)path->tag;
 
@@ -97,15 +97,17 @@ int stat_pre_connect(HURLPath *path,
     {
         stat->http = calloc(1, sizeof(HTTPStat));
     }
+
     gettimeofday(&stat->http->begin_connect, NULL);
+
     log_debug(__func__,
               "Began connecting @ %f %s%s",
               timeval_to_msec(&stat->http->begin_connect),
               path->server->domain->domain,
               path->path);
-    /* Always allow connect */
-    return 1;
 
+    /* Always allow connect */
+    return HURL_HOOK_OK;
 }
 void stat_post_connect(HURLPath *path,
                        HURLConnection *connection,
