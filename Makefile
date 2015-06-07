@@ -9,9 +9,9 @@ else ifeq ($(UNAME_S),Linux)
 endif
 
 ifeq ($(DEBUG), yes)
-    CFLAGS += -g3
+    override CFLAGS += -g3
 else
-    CFLAGS += -Os
+    override CFLAGS += -Os
 endif
 
 HURL_OBJS = $(patsubst %.c, %.o, $(wildcard libhurl/src/*.c))
