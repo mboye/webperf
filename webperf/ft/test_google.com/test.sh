@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-set -x
 
 source "$(git rev-parse --show-toplevel)/webperf/ft/common/ft.bash"
 

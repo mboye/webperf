@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 set -e
 
 source "$(git rev-parse --show-toplevel)/webperf/ft/common/ft.bash"
@@ -10,6 +9,7 @@ do
     then
         continue
     fi
-
+    test_name=$(basename $test | cut -b6-)
+    echo "Running test: $test_name"
     cd "$test" && "$test/test.sh"
 done

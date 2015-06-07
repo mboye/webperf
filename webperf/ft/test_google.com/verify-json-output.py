@@ -2,6 +2,8 @@
 import json
 import sys
 
+print "Validating test results..."
+
 try:
     data = json.load(open('webperf.output.json','r'))
     download_time_sum = 0
@@ -16,7 +18,7 @@ try:
         print "error: sum of all downloadTimes is zero."
         sys.exit(1)
 
-    print "JSON integrity verified."
+    print "Test results verified."
     sys.exit(0)
 except Exception as e:
     print "error: JSON integrity check failed: {}".format(str(e))
