@@ -4,6 +4,14 @@ import json
 import sys
 import os
 
+required_variables = ['GERRIT_CHANGE_ID', 'GERRIT_PATCHSET_REVISION',
+    'CODE_REVIEW', 'VERIFIED', 'BUILD_URL', 'GERRIT_HTTP_AUTH' ]
+
+if not all(var in os.environ for var in required_variables):
+    print "GERRIT environment variables missing."
+    print "0 comment(s) posted to Gerrit."
+    sys.exit(0)
+
 change_id = os.environ['GERRIT_CHANGE_ID']
 revision_id = os.environ['GERRIT_PATCHSET_REVISION']
 code_review = int(os.environ['CODE_REVIEW'])

@@ -1,4 +1,3 @@
-#!/usr/local/bin/phantomjs --ignore-ssl-errors=true
 var DATA_STORE = "/tmp/leone-render/";
 
 var page = require('webpage').create(),

@@ -1,4 +1,10 @@
 #!/bin/bash
+if [ -z "$WORKSPACE" ]
+then
+    echo "WORKSPACE not defined."
+    exit 1
+fi
+
 cd $WORKSPACE
 
 code_review=0
