@@ -535,7 +535,6 @@ unsigned int dns_count_rr(DNSRecordType type,
                     /* This should never happen. */
                     log_debug(__func__, "WARNING: Default case entered.");
                     exit(1);
-                    break;
             }
             /* Count records based on their type. */
             for (j = 0; j < nrof_records; j++)

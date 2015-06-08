@@ -41,6 +41,9 @@ void signal_handler(int signum,
                     siginfo_t *info,
                     void *context)
 {
+    (void)context;
+    (void)info;
+
 #ifdef AUTO_STACKTRACE
 #ifndef NDEBUG
     void *array[10];

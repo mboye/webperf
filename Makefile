@@ -30,6 +30,8 @@ INCLUDES = -I leone-tools/include \
 
 WEBPERF_LIBS += -lm -lssl -lcrypto
 
+all: webperf/webperf
+
 webperf/webperf: .hurl .dns .tools $(WEBPERF_OBJS)
 	$(CC) -MMD $(CFLAGS) $(INCLUDES) -o $@ \
 		$(WEBPERF_DEPS) $(WEBPERF_OBJS) $(WEBPERF_LIBS)

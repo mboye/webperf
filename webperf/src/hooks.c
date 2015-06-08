@@ -1,4 +1,5 @@
 #include "hurl/hurl.h"
+#include "hooks.h"
 #include <string.h>
 #include <dns_support.h>
 #include <fcntl.h>
@@ -13,6 +14,10 @@
 #include <arpa/inet.h>
 #include "webperf.h"
 #include <assert.h>
+
+#ifdef __APPLE__
+#include <sys/syslimits.h>
+#endif
 
 char *json_escape(char *str);
 void cdn_detect(ElementStat *stat,
@@ -73,6 +78,8 @@ int stat_redirect(HURLPath *path,
                   int response_code,
                   char *redirect_url)
 {
+    (void)response_code;
+
     ElementStat *stat = (ElementStat *)path->tag;
     /* Initialize HTTP statistics */
     if (!stat->http)
@@ -89,6 +96,8 @@ int stat_redirect(HURLPath *path,
 hurl_hook_error_t stat_pre_connect(HURLPath *path,
                                    HURLConnection *connection)
 {
+    (void)connection;
+
     ElementStat *stat = (ElementStat *)path->tag;
 
     /* TODO: Check if first element has been downloaded? If not then wait for it. */
@@ -497,6 +506,8 @@ void stat_transfer_complete(HURLPath *path,
                             size_t content_length,
                             size_t overhead)
 {
+    (void)connection;
+
     struct timeval diff;
 #ifdef __linux__
     unsigned int tcp_stats_len = sizeof(struct tcp_info);
@@ -715,6 +726,9 @@ void stat_response_code(HURLPath *path,
                         int response_code,
                         char *response_code_text)
 {
+    (void)connection;
+    (void)response_code_text;
+
     ElementStat *stat = (ElementStat *)path->tag;
     /* Initialize HTTP statistics */
     if (!stat->http)
@@ -729,6 +743,8 @@ void stat_response_latency(HURLPath *path,
                            char *data,
                            size_t data_len)
 {
+    (void)conn;
+
     char *eof_header;
     int first_recv = 0;
 #ifndef NDEBUG
@@ -791,6 +807,10 @@ void stat_transfer_failed(HURLPath *path,
                           size_t content_len,
                           size_t overhead)
 {
+    (void)conn;
+    (void)content_len;
+    (void)overhead;
+
     ElementStat *stat = (ElementStat *)path->tag;
     gettimeofday(&stat->end_transfer, NULL);
 }

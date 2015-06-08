@@ -154,7 +154,7 @@ struct hurl_path
     void *tag; /*  ointer used to associate user data with path (target). */
     struct timeval request_sent; /* When was a GET request sent for this path. */
     struct timeval response_received; /* When was the response to the GET request received. */
-    int redirect_count; /* Number of redirects that have been followed. */
+    unsigned int redirect_count; /* Number of redirects that have been followed. */
     HURLPath *redirector;
     HURLPath *redirectee;
 };
@@ -214,7 +214,7 @@ struct hurl_manager
     HURLDomain *domains; /* Pointers to domain structure. */
     unsigned int nrof_domains; /* Number of domains. */
     unsigned int connections; /* Number of open connections. */
-    unsigned int max_retries; /* Maximum number of dowmload retries. */
+    unsigned int max_retries; /* Maximum number of download retries. */
     unsigned int max_redirects; /* Maximum number of HTTP redirects to follow. */
 
     /* HOOK POINTS */

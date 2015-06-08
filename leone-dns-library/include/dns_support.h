@@ -97,7 +97,6 @@ char dns_parse_questions(char *respbuf,
 
 char dns_parse_rr_a(char **cursor,
                     char *cursor_max,
-                    DNSMessage *response,
                     DNSRecord *record);
 
 DNSRecord *dns_rr_random(DNSMessage *msg,
@@ -108,19 +107,16 @@ DNSRecord *dns_rr_random(DNSMessage *msg,
 char dns_parse_rr_ns(char *respbuf,
                      char **cursor,
                      char *cursor_max,
-                     DNSMessage *response,
                      DNSRecord *record);
 
 char dns_parse_rr_cname(char *respbuf,
                         char **cursor,
                         char *cursor_max,
-                        DNSMessage *response,
                         DNSRecord *record);
 
 char dns_parse_rr_soa(char *respbuf,
                       char **cursor,
                       char *cursor_max,
-                      DNSMessage *response,
                       DNSRecord *record);
 
 char dns_parse_rr_label(char *bgof_msg,

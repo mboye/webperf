@@ -187,19 +187,10 @@ void print_results(WebperfTest *test,
     }
 }
 
-void write_out(char *filename,
-               const char *mode,
-               FILE *fp)
-{
-    freopen(filename, mode, fp);
-    fclose(fp);
-
-}
-
 char *cutoff(char *str,
              unsigned int maxlen)
 {
-    unsigned int len = strlen(str);
+    size_t len = strlen(str);
     if (maxlen > 0)
     {
         if (len > maxlen)
@@ -209,7 +200,7 @@ char *cutoff(char *str,
         }
         else
         {
-            return allocstrcpy(str, len, 1);
+            return allocstrcpy(str, (unsigned int)len, 1);
         }
     }
     else

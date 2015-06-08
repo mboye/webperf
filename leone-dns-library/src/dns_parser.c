@@ -211,7 +211,7 @@ char dns_message_parse(DNSResolverState *state,
                     /* This assertion is not always true for poorly configured DNS servers and it doesnt really harm to accept A/AAAA records in the authorities section. */
                     /* assert(section == ANSWERS || section == ADDITIONALS); */
 
-                    if (dns_parse_rr_a(&cursor, cursor_max, response, record)
+                    if (dns_parse_rr_a(&cursor, cursor_max, record)
                         != DNS_OK)
                     {
                         return DNS_ERROR_FORMAT;
@@ -221,7 +221,6 @@ char dns_message_parse(DNSResolverState *state,
                     if (dns_parse_rr_cname(respbuf,
                                            &cursor,
                                            cursor_max,
-                                           response,
                                            record) != DNS_OK)
                     {
                         return DNS_ERROR_FORMAT;
@@ -232,7 +231,6 @@ char dns_message_parse(DNSResolverState *state,
                     if (dns_parse_rr_ns(respbuf,
                                         &cursor,
                                         cursor_max,
-                                        response,
                                         record) != DNS_OK)
                     {
                         return DNS_ERROR_FORMAT;
@@ -243,7 +241,6 @@ char dns_message_parse(DNSResolverState *state,
                     if (dns_parse_rr_soa(respbuf,
                                          &cursor,
                                          cursor_max,
-                                         response,
                                          record) != DNS_OK)
                     {
                         return DNS_ERROR_FORMAT;
@@ -320,7 +317,6 @@ char dns_message_parse(DNSResolverState *state,
 char dns_parse_rr_cname(char *respbuf,
                         char **cursor,
                         char *cursor_max,
-                        DNSMessage *response,
                         DNSRecord *record)
 {
     struct buffer *rdatabuf;
@@ -359,7 +355,6 @@ char dns_parse_rr_cname(char *respbuf,
 char dns_parse_rr_soa(char *bgof_msg,
                       char **cursor,
                       char *cursor_max,
-                      DNSMessage *response,
                       DNSRecord *record)
 {
     struct buffer *databuf;
@@ -447,7 +442,6 @@ char dns_parse_rr_soa(char *bgof_msg,
 
 char dns_parse_rr_a(char **cursor,
                     char *cursor_max,
-                    DNSMessage *response,
                     DNSRecord *record)
 {
     /* Check that end of RDATA is within message boundaries. */
@@ -473,7 +467,6 @@ char dns_parse_rr_a(char **cursor,
 char dns_parse_rr_ns(char *bgof_msg,
                      char **cursor,
                      char *cursor_max,
-                     DNSMessage *response,
                      DNSRecord *record)
 {
     struct buffer *rdatabuf;

@@ -28,9 +28,11 @@ void stat_connect_time(HURLPath *path,
                        float connect_time_ssl,
                        int reused,
                        int pipelined);
+
 void stat_body_recv(HURLPath *path,
                     char *data,
                     size_t data_len);
+
 int stat_send_request(HURLPath *path,
                       HURLConnection *connection,
                       int pipelined);
@@ -41,17 +43,21 @@ hurl_hook_error_t stat_pre_connect(HURLPath *path,
 void stat_post_connect(HURLPath *path,
                        HURLConnection *connection,
                        int retval);
+
 void stat_response_code(HURLPath *path,
                         HURLConnection *connection,
                         int response_code,
                         char *response_code_text);
+
 int stat_redirect(HURLPath *path,
                   int response_code,
                   char *redirect_url);
+
 void stat_response_latency(HURLPath *path,
                            HURLConnection *conn,
                            char *data,
                            size_t data_len);
+
 void stat_transfer_failed(HURLPath *path,
                           HURLConnection *conn,
                           size_t content_len,
