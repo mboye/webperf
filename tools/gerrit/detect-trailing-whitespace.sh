@@ -1,5 +1,5 @@
 #!/bin/bash
-for file in $(git diff --name-only HEAD~1..HEAD |
+for file in $(git diff --name-status HEAD~1..HEAD |
               awk '{ if($1 != "D") { print $2 }}')
 do
     egrep -Hn "\s+$" "$file" |
