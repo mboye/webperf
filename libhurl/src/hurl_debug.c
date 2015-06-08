@@ -24,9 +24,9 @@ void hurl_debug(const char *func,
 #endif
 }
 
-char *hurl_allocstrcpy(char *str,
-                       size_t str_len,
-                       unsigned int alloc_padding)
+char *hurl_allocstrcpy(const char *str,
+                       const size_t str_len,
+                       const unsigned int alloc_padding)
 {
     char *newstr;
     if (str != NULL)

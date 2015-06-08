@@ -128,7 +128,7 @@ void print_results(WebperfTest *test,
         freopen(jsonfn, "w", stdout);
 
         printf(
-               "{\"testName\":\"%s\",\"testVersion\":%d,\"timestamp\":%u,\"hostname\":\"%s\","
+               "{\"testName\":\"%s\",\"testVersion\":%d,\"timestamp\":%ld,\"hostname\":\"%s\","
                "\"connectTimeout\":%d,\"sendTimeout\":%d,\"receiveTimeout\":%d,\"http_version\":%1.1f,"
                "\"maxConnections\":%d,\"maxDomainConnections\":%d,\"noCache\":%d,\"nwp\":%d,\"userAgent\":\"%s\","
                "\"startTime\":%f,\"execTime\":%f,\"interrupt\":%d,"
@@ -151,6 +151,7 @@ void print_results(WebperfTest *test,
                interrupted,
                test->tag,
                dns_conf->head);
+
         buffer_free(dns_conf);
         free(user_agent);
 
@@ -601,7 +602,7 @@ void print_stat(WebperfTest *test,
         }
         if (test->stats.http.expiry_date)
         {
-            snprintf(tmp, sizeof(tmp), "\"date\":%d,", stat->http->expiry_date);
+            snprintf(tmp, sizeof(tmp), "\"expiryDate\":%d,", stat->http->expiry_date);
             buffer_insert_strlen(json, tmp);
         }
 
@@ -617,7 +618,7 @@ void print_stat(WebperfTest *test,
                      stat->http->header_size);
             buffer_insert_strlen(json, tmp);
         }
-        if (test->stats.http.header_size)
+        if (test->stats.http.response_code)
         {
             snprintf(tmp, sizeof(tmp), "\"responseCode\":%d,",
                      stat->http->response_code);

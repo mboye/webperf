@@ -7,8 +7,6 @@
 #include "webperf.h"
 #include "sk_metrics.h"
 
-/* char *strcasestr(const char *haystack, const char *needle); */
-
 float median_float(float *values,
                    unsigned int n)
 {

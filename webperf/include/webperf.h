@@ -7,6 +7,8 @@
 #ifndef WEBPERF_H_
 #define WEBPERF_H_
 
+#define LOG_DEBUG(message, ...) log_debug(__func__, message, __VA_ARGS__)
+
 #define WEBPERF_TEST_VERSION 29
 #define WEBPERF_TEST_NAME "webperf"
 
@@ -133,7 +135,7 @@ struct webperf_test
     float http_version;
     char *user_agent;
     int no_cache;
-    unsigned int timestamp; /* Timestamp of test run */
+    time_t timestamp;
     int http_no_cache;
     HURLManager *manager;
     char *tag;
@@ -143,6 +145,7 @@ struct webperf_test
     char *body_path, *header_path;
     HURLHeader *stat_headers;
     int always_print_output;
+    unsigned int exec_timeout;
     struct
     {
         struct

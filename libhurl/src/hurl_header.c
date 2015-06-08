@@ -74,8 +74,8 @@ char *hurl_header_get(HURLHeader *headers,
     return NULL;
 }
 
-int hurl_header_split_line(char *line,
-                           size_t line_len,
+int hurl_header_split_line(const char *line,
+                           const size_t line_len,
                            char **key,
                            char **value)
 {
@@ -156,8 +156,8 @@ int hurl_header_exists(HURLHeader *headers,
 }
 
 int hurl_header_add(HURLHeader **headers,
-                    char *key,
-                    char *value)
+                    const char *key,
+                    const char *value)
 {
     HURLHeader *header, *h = NULL;
     int updated = 0;

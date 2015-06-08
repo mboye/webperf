@@ -421,16 +421,16 @@ void hurl_domain_free(HURLManager *manager,
                       HURLDomain *domain);
 
 int hurl_header_add(HURLHeader **headers,
-                    char *key,
-                    char *value);
+                    const char *key,
+                    const char *value);
 
 char * hurl_header_get(HURLHeader *headers,
                        char *key);
 
 void hurl_headers_free(HURLHeader *bgof_headers);
 
-int hurl_header_split_line(char *line,
-                           size_t line_len,
+int hurl_header_split_line(const char *line,
+                           const size_t line_len,
                            char **key,
                            char **value);
 

@@ -349,8 +349,10 @@ int dns_resolve(DNSCache *cache,
         {/* Find next name server to query. */
 
             /* Create DNS packet. */
-            dns_message_flag(&flags, DNS_FLAG_RECURSION_DESIRED,
+            dns_message_flag(&flags,
+                             DNS_FLAG_RECURSION_DESIRED,
                              state->recurse);
+
             dns_create_packet(queue_top->qname, qtype, flags, &qpacket,
                               &qpacket_len,
                               &qpacket_id);
