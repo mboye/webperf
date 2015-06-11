@@ -55,7 +55,7 @@ HURLHeader *hurl_headers_copy(HURLHeader *headers)
 }
 
 char *hurl_header_get(HURLHeader *headers,
-                      char *key)
+                      const char *key)
 {
     HURLHeader *h;
     if (headers == NULL)
@@ -75,7 +75,7 @@ char *hurl_header_get(HURLHeader *headers,
 }
 
 int hurl_header_split_line(const char *line,
-                           const size_t line_len,
+                           size_t line_len,
                            char **key,
                            char **value)
 {

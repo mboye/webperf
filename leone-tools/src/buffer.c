@@ -13,8 +13,8 @@
 #endif
 
 int buffer_init(struct buffer **buf,
-                unsigned int size,
-                unsigned int increment)
+                size_t size,
+                size_t increment)
 {
     struct buffer *tmp;
     if ((tmp = malloc(sizeof(struct buffer))) == NULL)
@@ -44,7 +44,8 @@ char buffer_trim(struct buffer *buf)
     assert(buf!=NULL);
     if (buf->data_len > 0)
     {
-        return buffer_resize(buf, (int)(buf->data_len - buf->size));
+        ssize_t adjustment = (ssize_t)buf->data_len - (ssize_t)buf->size;
+        return buffer_resize(buf, adjustment);
     }
     else
     {
@@ -93,22 +94,17 @@ void buffer_reset(struct buffer *buf)
 }
 
 void buffer_insert(struct buffer *buf,
-                   char *data,
-                   unsigned int data_len)
+                   const char *data,
+                   size_t data_len)
 {
-    unsigned int increment;
-    /* Sanity check. */
-    assert(buf != NULL && data != NULL && data_len >= 0);
     /* Check if there is enough space in buffer. */
-    if (buf->size - buf->data_len - 1 < data_len)
+    size_t buffer_space = buf->size - buf->data_len - 1;
+    if (buffer_space < data_len)
     {
-        /* log_debug(__func__, "Expansion required."); */
-        /* Not enough space so expand buffer. */
-        increment = (unsigned int)ceil((float)data_len
-            / (float)buf->increment);
-        increment *= buf->increment;
-        buffer_resize(buf, increment);
+        size_t adjustment = (1 + data_len / buf->increment) * buf->increment;
+        buffer_resize(buf, adjustment);
     }
+
     /* Insert data into buffer. */
     memcpy(buf->cursor, data, data_len);
     /* Update pointers. */
@@ -120,7 +116,7 @@ void buffer_insert(struct buffer *buf,
 }
 
 void buffer_insert_strlen(struct buffer *buf,
-                          char *data)
+                          const char *data)
 {
     buffer_insert(buf, data, strlen(data));
 }
@@ -139,14 +135,14 @@ void buffer_insert_int(struct buffer *buf,
 }
 
 char buffer_resize(struct buffer *buf,
-                   int adjustment)
+                   ssize_t adjustment)
 {
     char *tmp;
-    /* Sanity checks. */
-    assert(buf != NULL);
-    assert(buf->size + adjustment + 1 > 0);
+    ssize_t new_buffer_size = (ssize_t)buf->size + adjustment + 1;
+    assert(new_buffer_size > 0);
+
     /* New buffer size must be greater than zero. */
-    if ((tmp = realloc(buf->head, buf->size + adjustment + 1)) != NULL)
+    if ((tmp = realloc(buf->head, (size_t)new_buffer_size)) != NULL)
     {
         buf->size += adjustment;
         buf->head = tmp;

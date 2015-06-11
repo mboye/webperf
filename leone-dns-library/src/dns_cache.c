@@ -558,7 +558,7 @@ DNSCache *dns_cache_init()
 }
 
 DNSRecord *dns_cache_find_rr(DNSCache *cache,
-                             char *qname,
+                             const char *qname,
                              DNSRecordType qtype,
                              DNSSection section,
                              DNSMessage **msg)
@@ -576,8 +576,6 @@ DNSRecord *dns_cache_find_rr(DNSCache *cache,
 
     /* Get cache lock. */
     pthread_mutex_lock(&cache->lock);
-
-    /* log_debug(__func__, "Search for '%s' in cache.", qname); */
 
     /* Split domain name into labels. */
     i = 0;

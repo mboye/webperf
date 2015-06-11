@@ -65,12 +65,13 @@ struct dns_stat
     int return_code;
     float network_time;
     float exec_time;
-    unsigned int data_tx, data_rx;
-    unsigned int msg_tx, msg_rx;
-    unsigned int queries;
+    size_t data_tx, data_rx;
+    int msg_tx, msg_rx;
+    int queries;
     char *answer_a, *answer_aaaa;
-    int answer_a_ttl, answer_aaaa_ttl;
-    unsigned int nrof_answers_a, nrof_answers_aaaa;
+    int answer_a_ttl;
+    int answer_aaaa_ttl;
+    int nrof_answers_a, nrof_answers_aaaa;
     char *trace;
     struct timeval begin_resolve;
     char *qname, *qname_final;
@@ -88,13 +89,14 @@ struct http_stat
     int return_code;
     int chunked_encoding;
     char *redirect_url;
-    unsigned int date, expiry_date;
-    unsigned int response_code;
+    time_t date;
+    time_t expiry_date;
+    int response_code;
     unsigned int header_size;
     int connection_reused;
     int pipelined;
     char *headers;
-    #ifdef __linux__
+#ifdef __linux__
     struct tcp_info *tcp_stats;
 #endif
     struct timeval begin_connect, request_sent;
@@ -102,7 +104,7 @@ struct http_stat
     char *domain, *path;
     unsigned short port;
     float bgof_header, bgof_body;
-    unsigned int header_len;
+    size_t header_len;
     HURLTransferResult result;
 };
 
@@ -140,7 +142,6 @@ struct webperf_test
     HURLManager *manager;
     char *tag;
     DNSCache *cache;
-    int print_url_length;
     DNSRecordType dns_query_type;
     char *body_path, *header_path;
     HURLHeader *stat_headers;
@@ -173,6 +174,7 @@ struct webperf_test
             int domain, port, path;
             int redirector;
             int redirectee;
+            size_t max_url_length;
         } http;
 
         struct
@@ -204,10 +206,9 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
 char *strptime(const char *s, const char *format, struct tm *tm);
 #endif
 
-void print_stat(WebperfTest *test,
-                ElementStat *stat);
-void print_results(WebperfTest *test,
-                   int interrupted,
+void print_stat(ElementStat *stat);
+
+void print_test_results(int interrupted,
                    char *filename);
 
 void *duplicate_element_stat(HURLPath *new_path,

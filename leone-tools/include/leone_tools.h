@@ -2,6 +2,7 @@
 #define LEONE_TOOLS_H_
 #include <sys/time.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 /* Return smallest of two values. */
 #define MIN(X,Y) X > Y ? Y : X
@@ -67,25 +68,25 @@ struct buffer
     char *head; /* Beginning of buffer. */
     char *cursor; /* Next unused byte in buffer. */
     char *tail; /* End of allocated memory. */
-    unsigned int size; /* Size of allocated memory. Not size of data in buffer.  */
-    unsigned int data_len; /* Size of data stored in buffer. Not size of allocated memory. */
-    unsigned int increment; /* Minimum size to expand buffer with when calling realloc(). */
+    size_t size; /* Size of allocated memory. Not size of data in buffer.  */
+    size_t data_len; /* Size of data stored in buffer. Not size of allocated memory. */
+    size_t increment; /* Minimum size to expand buffer with when calling realloc(). */
 };
 
 /* Expand buffer memory allocation.
  Adjustment > 0 => increase buffer size.
  Adjustment < 0 => reduce buffer size. */
 char buffer_resize(struct buffer *buf,
-                   int adjustment);
+                   ssize_t adjustment);
 
 /* Insert data into buffer. */
 void buffer_insert(struct buffer *buf,
-                   char *data,
-                   unsigned int data_len);
+                   const char *data,
+                   size_t data_len);
 
-/* Insert NULL-termianted data into buffer and use strlen() to determine length of data. */
+/* Insert NULL-terminated data into buffer and use strlen() to determine length of data. */
 void buffer_insert_strlen(struct buffer *buf,
-                          char *data);
+                          const char *data);
 
 /* Insert short value into buffer. */
 void buffer_insert_short(struct buffer *buf,
@@ -104,8 +105,8 @@ void buffer_free(struct buffer *buf);
  Capacity: initial buffer size.
  Increment: minimum additional memory to allocate when buffer runs out of space. */
 int buffer_init(struct buffer **buf,
-                unsigned int capacity,
-                unsigned int increment);
+                size_t capacity,
+                size_t increment);
 
 /* Deletes data from the end of a buffer. */
 void buffer_rewind(struct buffer *buf,
@@ -128,8 +129,8 @@ void buffer_snprintf(struct buffer *buf,
                      ...); /* Formats a string using like printf and inserts it into buffer */
 
 /* Allocate memory and copy string to it. */
-char *allocstrcpy(char *str,
-                  unsigned int str_len,
-                  unsigned int alloc_padding);
+char *allocstrcpy(const char *str,
+                  size_t str_len,
+                  size_t alloc_padding);
 
 #endif /* LEONE_TOOLS_H_ */

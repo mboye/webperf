@@ -57,7 +57,15 @@ config_parser_rc_t config_stats_parse(const char* stats_key,
 
     if (strcasecmp(stats_key, "http.URLLength") == 0)
     {
-        return parse_int(value, &test->print_url_length, -1);
+        unsigned int max_url_length;
+
+        config_parser_rc_t rc = parse_int(value, &max_url_length, 0);
+        if (rc == CONFIG_PARSER_OK)
+        {
+            test->stats.http.max_url_length = (size_t)max_url_length;
+        }
+
+        return rc;
     }
     else if (strcasecmp(stats_key, "http.header") == 0)
     {

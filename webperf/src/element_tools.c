@@ -19,20 +19,19 @@
 #include "sk_metrics.h"
 
 char *json_escape(char *str);
-char *cutoff(char *str,
-             unsigned int maxlen);
+char *cutoff(const char *str,
+             size_t maxlen);
 
 /* This is main function for printing measurement results. */
-void print_results(WebperfTest *test,
-                   int interrupted,
-                   char *filename)
+void print_test_results(int interrupted,
+                        char *filename)
 {
     ElementStat *stat;
     int is_first = 1;
     char hostname[512], timeout[1024];
     Buffer *dns_conf;
     char *user_agent, *tmp_ptr, *rdata, tmp[1024];
-    int i, n;
+    int i;
     DNSMessage *msg;
     const char *nwp_str;
     char *jsonfn, *csvfn;
@@ -51,9 +50,11 @@ void print_results(WebperfTest *test,
             case IPv4:
                 nwp_str = "v4";
                 break;
+
             case IPv6:
                 nwp_str = "v6";
                 break;
+
             case IPv46:
                 nwp_str = "v4v6";
                 break;
@@ -61,9 +62,10 @@ void print_results(WebperfTest *test,
             case IPv64:
                 nwp_str = "v6v4";
                 break;
-            default:
-                case DEFAULT:
+
+            case DEFAULT:
                 nwp_str = "default";
+                break;
         }
 
         /* Get user-agent header. */
@@ -72,12 +74,15 @@ void print_results(WebperfTest *test,
 
         /* Create DNS configuration string. */
         buffer_init(&dns_conf, 1024, 128);
-        n = 0;
+        int n = 0;
         for (i = 0;
             test->dns_state_template->timeout[i] > 0
                 && i < DNS_MAX_SEND_COUNT; i++)
         {
-            n += snprintf(&timeout[n], sizeof(timeout) - n, "%u ",
+            size_t remaining_buffer_space = sizeof(timeout) - (size_t)n;
+            n += snprintf(&timeout[n],
+                          remaining_buffer_space,
+                          "%u ",
                           test->dns_state_template->timeout[i]);
         }
         timeout[n - 1] = '\0';
@@ -167,7 +172,9 @@ void print_results(WebperfTest *test,
             {
                 is_first = 0;
             }
-            print_stat(test, stat);
+
+            print_stat(stat);
+
             stat = stat->next;
         }
         printf("]}\n"); /*End elements, end container */
@@ -188,8 +195,8 @@ void print_results(WebperfTest *test,
     }
 }
 
-char *cutoff(char *str,
-             unsigned int maxlen)
+char *cutoff(const char *str,
+             size_t maxlen)
 {
     size_t len = strlen(str);
     if (maxlen > 0)
@@ -201,7 +208,7 @@ char *cutoff(char *str,
         }
         else
         {
-            return allocstrcpy(str, (unsigned int)len, 1);
+            return allocstrcpy(str, len, 1);
         }
     }
     else
@@ -211,13 +218,12 @@ char *cutoff(char *str,
 
 }
 
-void print_stat(WebperfTest *test,
-                ElementStat *stat)
+void print_stat(ElementStat *stat)
 {
     Buffer *json;
     char tmp[4096], *tmp_ptr;
-    unsigned int tmp_len;
-    unsigned int begin_size;
+    size_t tmp_len;
+    size_t begin_size;
     char *str = NULL;
     char *escaped;
     struct timeval diff;
@@ -226,16 +232,8 @@ void print_stat(WebperfTest *test,
     buffer_insert_strlen(json, "{");
 
     /* URL of element. */
-    if (test->print_url_length >= 0)
-    {
-        str = cutoff(stat->url, test->print_url_length);
-        escaped = json_escape(str);
-    }
-    else
-    {
-        /* Do not shorten URL */
-        escaped = json_escape(stat->url);
-    }
+    str = cutoff(stat->url, test->stats.http.max_url_length);
+    escaped = json_escape(str);
 
     tmp_len = strlen(escaped) + strlen("\"url\":\"\",") + 1;
     if ((tmp_ptr = calloc(tmp_len, sizeof(char))) == NULL)
@@ -322,13 +320,13 @@ void print_stat(WebperfTest *test,
             }
             if (test->stats.dns.data_tx)
             {
-                snprintf(tmp, sizeof(tmp), "\"dataSent\":%u,",
+                snprintf(tmp, sizeof(tmp), "\"dataSent\":%ld,",
                          stat->dns->data_tx);
                 buffer_insert_strlen(json, tmp);
             }
             if (test->stats.dns.data_rx)
             {
-                snprintf(tmp, sizeof(tmp), "\"dataReceived\":%u,",
+                snprintf(tmp, sizeof(tmp), "\"dataReceived\":%ld,",
                          stat->dns->data_rx);
                 buffer_insert_strlen(json, tmp);
             }
@@ -414,19 +412,11 @@ void print_stat(WebperfTest *test,
 
         begin_size = json->data_len;
         /* Redirected URL of element. */
-        if (test->stats.http.redirect_url != 0
-            && stat->http->redirect_url != NULL)
+        if (test->stats.http.redirect_url != 0 &&
+            stat->http->redirect_url != NULL)
         {
-            if (test->print_url_length >= 0)
-            {
-                str = cutoff(stat->http->redirect_url, test->print_url_length);
-                escaped = json_escape(str);
-            }
-            else
-            {
-                /* Do not shorten URL */
-                escaped = json_escape(stat->http->redirect_url);
-            }
+            str = cutoff(stat->http->redirect_url, test->stats.http.max_url_length);
+            escaped = json_escape(str);
 
             tmp_len = strlen(escaped) + strlen("\"redirectURL\":\"\",") + 1;
             if ((tmp_ptr = calloc(tmp_len, sizeof(char))) == NULL)
@@ -493,7 +483,7 @@ void print_stat(WebperfTest *test,
         }
         if (test->stats.http.path)
         {
-            str = cutoff(stat->http->path, test->print_url_length);
+            str = cutoff(stat->http->path, test->stats.http.max_url_length);
             escaped = json_escape(str);
             snprintf(tmp, sizeof(tmp), "\"path\":\"%s\",", escaped);
             buffer_insert_strlen(json, tmp);
@@ -597,12 +587,12 @@ void print_stat(WebperfTest *test,
         }
         if (test->stats.http.date)
         {
-            snprintf(tmp, sizeof(tmp), "\"date\":%d,", stat->http->date);
+            snprintf(tmp, sizeof(tmp), "\"date\":%ld,", stat->http->date);
             buffer_insert_strlen(json, tmp);
         }
         if (test->stats.http.expiry_date)
         {
-            snprintf(tmp, sizeof(tmp), "\"expiryDate\":%d,", stat->http->expiry_date);
+            snprintf(tmp, sizeof(tmp), "\"expiryDate\":%ld,", stat->http->expiry_date);
             buffer_insert_strlen(json, tmp);
         }
 

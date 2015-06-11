@@ -128,6 +128,6 @@ void dns_section_free(DNSMessage *msg,
                       char section);
 
 void record_debug(const char *func,
-                  DNSRecord *record);
+                  const DNSRecord *record);
 
 #endif /* DNS_SUPPORT_H_ */

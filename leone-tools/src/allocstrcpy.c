@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *allocstrcpy(char *str,
-                  unsigned int str_len,
-                  unsigned int alloc_padding)
+char *allocstrcpy(const char *str,
+                  size_t str_len,
+                  size_t alloc_padding)
 {
     char *newstr;
     if (str != NULL)

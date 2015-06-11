@@ -498,9 +498,9 @@ void dns_message_section(DNSMessage *msg,
     }
 }
 
-unsigned int dns_count_rr(DNSRecordType type,
-                          DNSSection section,
-                          DNSMessage *msg)
+int dns_count_rr(DNSRecordType type,
+                 DNSSection section,
+                 DNSMessage *msg)
 {
     DNSRecord **records;
     unsigned short nrof_records = 0;

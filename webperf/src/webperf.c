@@ -53,13 +53,11 @@ static void signal_handler(int signum,
 #endif
 #endif
     log_debug(__func__, "Signal: %d. Aborting...", signum);
-    char *fn = NULL;
+
     /* Print statistics for all elements. */
     if (test != NULL && test->always_print_output)
     {
-        /* The following call will not do anything useful:
-           should set fn to something sensible. */
-        print_results(test, -signum, fn);
+        print_test_results(-signum, NULL);
     }
 #ifdef AUTO_STACKTRACE
     abort();
@@ -84,7 +82,7 @@ static int test_init()
         goto error;
     }
 
-    test->print_url_length = WEBPERF_PRINT_URL_LENGTH;
+    test->stats.http.max_url_length = SIZE_MAX;
     test->dns_query_type = A;
     test->timestamp = time(NULL);
     test->tag = strdup("");
@@ -194,7 +192,7 @@ int main(int argc,
         int retval =  hurl_exec(test->manager);
         if(retval)
         {
-            print_results(test, 0, output_prefix);
+            print_test_results(0, output_prefix);
 
             dns_cache_free(test->cache);
             test_free();
@@ -262,7 +260,7 @@ void *timeout_killer(void *arg)
     /* Print statistics for all elements. */
     if (test != NULL && test->always_print_output)
     {
-        print_results(test, WEBPERF_EXEC_TIMEOUT, fn);
+        print_test_results(WEBPERF_EXEC_TIMEOUT, fn);
     }
 
     exit(WEBPERF_EXEC_TIMEOUT);

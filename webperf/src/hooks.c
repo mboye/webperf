@@ -193,7 +193,7 @@ void stat_header_received(HURLPath *path,
     Buffer *json = NULL;
     char *tmp;
     char *escaped;
-    int tmp_len;
+    size_t tmp_len;
 
     /* Initialize HTTP statistics */
     if (!stat->http)
@@ -378,7 +378,7 @@ void dns_resolve_wrapper(HURLDomain *domain,
                                               response);
 
         /* Allocate memory for address structures */
-        if ((domain->addresses = calloc(domain->nrof_addresses,
+        if ((domain->addresses = calloc((size_t)domain->nrof_addresses,
                                         sizeof(struct sockaddr *))) == NULL)
         {
             domain->dns_state = DNS_STATE_ERROR;
@@ -461,7 +461,7 @@ void dns_resolve_wrapper(HURLDomain *domain,
             != NULL)
         {
             stat->dns->answer_a = dns_record_rdata_str(record);
-            stat->dns->answer_a_ttl = record->ttl;
+            stat->dns->answer_a_ttl = (int)record->ttl;
         }
         else
         {
@@ -474,7 +474,7 @@ void dns_resolve_wrapper(HURLDomain *domain,
             != NULL)
         {
             stat->dns->answer_aaaa = dns_record_rdata_str(record);
-            stat->dns->answer_aaaa_ttl = record->ttl;
+            stat->dns->answer_aaaa_ttl = (int)record->ttl;
         }
         else
         {
@@ -604,8 +604,8 @@ char *path_filename(HURLPath *path)
 {
     char *tmp = NULL;
     char filename[PATH_MAX];
-    int i, j = 0;
-    int path_len = strlen(path->path);
+    size_t j = 0;
+    size_t path_len = strlen(path->path);
     if (!getcwd(filename, sizeof(filename)))
     {
         return NULL;
@@ -613,7 +613,7 @@ char *path_filename(HURLPath *path)
     j = strlen(filename);
     filename[j++] = '/';
     filename[j] = '\0';
-    for (i = 1; i < path_len; i++)
+    for (size_t i = 1; i < path_len; i++)
     {
         if (path->path[i] == '/' || isspace(path->path[i])
             || isblank(path->path[i]))
@@ -628,8 +628,8 @@ char *path_filename(HURLPath *path)
     /* Optimize memory allocation */
     tmp = allocstrcpy(filename, j, 1);
     return tmp;
-
 }
+
 /**
  * save the body of the elements
  */
@@ -768,7 +768,7 @@ void stat_response_latency(HURLPath *path,
     if (stat->http->header_len == 0)
     {
         eof_header = strstr(data, "\r\n\r\n"); /* TODO Use header offset instead? */
-        stat->http->header_len = eof_header - data + 4;
+        stat->http->header_len = (size_t)(eof_header - data + 4);
         first_recv = 1;
     }
 

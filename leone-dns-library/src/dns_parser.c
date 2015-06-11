@@ -580,7 +580,7 @@ char dns_parse_rr_label(char *bgof_msg,
     }
 }
 void record_debug(const char *func,
-                  DNSRecord *record)
+                  const DNSRecord *record)
 {
 #ifndef NDEBUG
     char ipaddr[INET6_ADDRSTRLEN];

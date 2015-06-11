@@ -26,7 +26,7 @@ void dns_cache_print_csv(DNSMessage *root);
 DNSCache *dns_cache_init();
 
 DNSRecord *dns_cache_find_rr(DNSCache *cache,
-                             char *qname,
+                             const char *qname,
                              DNSRecordType qtype,
                              DNSSection section,
                              DNSMessage **msg);

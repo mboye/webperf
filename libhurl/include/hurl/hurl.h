@@ -180,14 +180,14 @@ struct hurl_domain
     HURLDomain *previous, *next; /* Linked list pointers. */
     char *domain; /* Domain name of server. */
     struct sockaddr **addresses; /* IP addresses of domain name */
-    unsigned int nrof_addresses; /* Number of IP addresses available. */
-    unsigned int preferred_address; /* Index of preferred IP address. */
+    int nrof_addresses; /* Number of IP addresses available. */
+    int preferred_address; /* Index of preferred IP address. */
     HURLDNSState dns_state; /* Has the domain name been resolved? */
     HURLServer *servers; /* Linked list of servers. */
-    unsigned short nrof_servers; /* Number of servers. */
-    unsigned int max_connections; /* Overall connection limit */
-    unsigned int nrof_connections; /* Number of connections. */
-    unsigned int nrof_paths; /* Number of paths belonging to this domain. */
+    short nrof_servers; /* Number of servers. */
+    int max_connections; /* Overall connection limit */
+    int nrof_connections; /* Number of connections. */
+    int nrof_paths; /* Number of paths belonging to this domain. */
     pthread_mutex_t dns_lock; /* DNS resolution lock. */
     pthread_t thread;
     int thread_running; /* Is a thread running for this domain. */
@@ -425,12 +425,12 @@ int hurl_header_add(HURLHeader **headers,
                     const char *value);
 
 char * hurl_header_get(HURLHeader *headers,
-                       char *key);
+                       const char *key);
 
 void hurl_headers_free(HURLHeader *bgof_headers);
 
 int hurl_header_split_line(const char *line,
-                           const size_t line_len,
+                           size_t line_len,
                            char **key,
                            char **value);
 

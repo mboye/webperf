@@ -601,10 +601,11 @@ int dns_resolve(DNSCache *cache,
                                         /* Quickly check transaction ID. */
                                         rcvd_id =
                                             ntohs(chars_to_short(respbuf));
+
                                         if (rcvd_id == qpacket_id)
                                         {
                                             response_received = 1;
-                                            state->stats.data_rx += respbuf_len;
+                                            state->stats.data_rx += (size_t)respbuf_len;
                                             state->stats.packet_rx++;
                                             /* Parse DNS message if transaction ID matches. */
                                             if ((state->responses[state->nrof_responses] =

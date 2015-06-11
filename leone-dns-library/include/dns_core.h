@@ -201,8 +201,8 @@ struct dns_resolver_state
     {
         float network_time;
         char *firstAnswer;
-        unsigned int data_tx, data_rx;
-        unsigned int packet_tx, packet_rx;
+        size_t data_tx, data_rx;
+        int packet_tx, packet_rx;
     } stats;
 };
 typedef struct dns_resolver_state DNSResolverState;
@@ -268,9 +268,10 @@ void skip_line(char*  buf,
 int dns_resolver_ready(DNSResolverState *state);
 
 /* Functions for presenting DNS information. */
-unsigned int dns_count_rr(enum dns_record_type type,
-                          DNSSection section,
-                          DNSMessage *msg);
+int dns_count_rr(enum dns_record_type type,
+                 DNSSection section,
+                 DNSMessage *msg);
+
 char *dns_record_rdata_str(DNSRecord *record);
 
 struct timeval dns_sum_rtt(DNSResolverState *state);
