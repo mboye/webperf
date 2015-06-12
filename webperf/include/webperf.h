@@ -200,7 +200,6 @@ struct webperf_test
 /* GLOBAL variable */
 WebperfTest *test;
 
-void str_trim(char *str);
 #ifndef __cplusplus
 int strncasecmp(const char *s1, const char *s2, size_t n);
 char *strptime(const char *s, const char *format, struct tm *tm);

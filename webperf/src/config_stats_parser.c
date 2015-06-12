@@ -59,7 +59,7 @@ config_parser_rc_t config_stats_parse(const char* stats_key,
     {
         unsigned int max_url_length;
 
-        config_parser_rc_t rc = parse_int(value, &max_url_length, 0);
+        config_parser_rc_t rc = parse_uint(value, &max_url_length, 0);
         if (rc == CONFIG_PARSER_OK)
         {
             test->stats.http.max_url_length = (size_t)max_url_length;

@@ -24,7 +24,8 @@ echo "Build log: $BUILD_LOG"
 
 export CC=clang
 export CFLAGS="-Weverything -Wno-padded"
-if make webperf/webperf > $BUILD_LOG 2>&1 && $WORKSPACE/webperf/ft/run-all-tests.sh
+export DEBUG=yes
+if make all > $BUILD_LOG 2>&1 && $WORKSPACE/webperf/ft/run-all-tests.sh
 then
     echo "Build successful."
     verified=1

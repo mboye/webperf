@@ -25,8 +25,6 @@
 
 #include <openssl/sha.h>
 
-void test_free();
-
 void *timeout_killer(void *arg);
 
 static void print_usage()
@@ -34,6 +32,8 @@ static void print_usage()
     printf("Usage: webperf --version\n");
     printf("       webperf <test.conf> <output-prefix>\n");
 }
+
+static void signal_handler() __attribute__ ((noreturn));
 
 static void signal_handler(int signum,
                     siginfo_t *info,
@@ -64,6 +64,18 @@ static void signal_handler(int signum,
 #else
     exit(signum);
 #endif
+}
+
+static void test_free()
+{
+    if (test) {
+        hurl_headers_free(test->stat_headers);
+
+        /* test->elements are free'd by HURL */
+        hurl_manager_free(test->manager);
+
+        free(test);
+    }
 }
 
 static int test_init()
@@ -208,42 +220,6 @@ int main(int argc,
         printf("No target URLs loaded. Check your test configuration.");
         exit(WEBPERF_NO_TARGETS);
     }
-}
-
-void str_trim(char *str)
-{
-    unsigned int str_len;
-    int i;
-    str_len = strlen(str);
-    /* Trim end of string. */
-    for (i = str_len - 1; i >= 0; i--)
-    {
-        if ((*(str + i)) == '\n' || (*(str + i)) == ' ' || (*(str + i)) == '\n'
-            || (*(str + i)) == '\r')
-        {
-            (*(str + i)) = '\0';
-        }
-        else
-        {
-            /* First non-spacing char detected. */
-            break;
-        }
-    }
-
-}
-
-
-
-void test_free()
-{
-    if (test) {
-        hurl_headers_free(test->stat_headers);
-        hurl_manager_free(test->manager);
-
-        free(test);
-    }
-
-    /* TODO: Implement this */
 }
 
 void *timeout_killer(void *arg)
