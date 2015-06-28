@@ -201,9 +201,6 @@ unsigned short dns_message_flag(unsigned short *flags,
             break;
         case DNS_FLAG_RESP_CODE:
             break;
-        default:
-            log_debug(__func__, "Unkown flag.");
-            exit(EXIT_FAILURE);
     }
 
     if (value != DNS_FLAG_READ)

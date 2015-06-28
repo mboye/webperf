@@ -407,16 +407,6 @@ int dns_resolve(DNSCache *cache,
                                   "DNS client improperly configured. Missing A/AAAA record of recursive nameserver.");
 
                         return DNS_LOOP;
-
-                        /* A/AAAA record of NS record not in cache. */
-                        queue_tmp = calloc(1, sizeof(DNSQueryQueue));
-                        queue_tmp->qname = allocstrcpy(ns->data, ns->data_len,
-                                                       1);
-                        queue_top->next = queue_tmp;
-                        queue_tmp->prev = queue_top;
-                        queue_top = queue_tmp;
-                        next_query = 1;
-                        break;
                     }
                     else
                     {

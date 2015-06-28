@@ -594,7 +594,6 @@ ssize_t hurl_recv(HURLConnection *connection,
                 }
         }
     }
-    return -1;
 }
 
 ssize_t hurl_send(HURLConnection *connection,

@@ -333,11 +333,12 @@ void dns_cache_print(DNSMessage *root,
 {
     DNSMessage *node;
     char p[512];
-    char *name;
+    const char *name;
     int i, af;
     char debug_addr[INET6_ADDRSTRLEN];
     int nrof_records = root->nrof_answers + root->nrof_authorities
         + root->nrof_additionals + root->nrof_children;
+
     if (parent != NULL)
     {
         if (!nrof_records)
@@ -350,6 +351,7 @@ void dns_cache_print(DNSMessage *root,
             printf("--- [%s]\n", root->label);
         snprintf(p, sizeof(p), "<root> ");
     }
+
     /* Print ANSWERS */
     for (i = 0; i < root->nrof_answers; i++)
     {
@@ -358,7 +360,10 @@ void dns_cache_print(DNSMessage *root,
         inet_ntop(af, root->answers[i]->data, debug_addr, INET6_ADDRSTRLEN);
         name = root->answers[i]->name;
         if (strlen(name) == 0)
+        {
             name = ".";
+        }
+
         if (af == AF_INET)
         {
             printf("%s--- A: %s\n", p, debug_addr);

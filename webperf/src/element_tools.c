@@ -189,7 +189,7 @@ void print_test_results(int interrupted,
         csvfn = malloc(strlen(filename) + strlen(".csv"));
         sprintf(csvfn, "%s.csv", filename);
         freopen(csvfn, "w", stdout);
-        print_sk_metrics_csv(test, interrupted, STDOUT_FILENO);
+        print_sk_metrics_csv(interrupted, STDOUT_FILENO);
         //fflush(stdout);
         fclose(stdout);
     }

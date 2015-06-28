@@ -79,8 +79,7 @@ float median_int(int *values,
     }
 }
 
-void print_sk_metrics_csv(WebperfTest *test,
-                          int interrupted,
+void print_sk_metrics_csv(int interrupted,
                           int fd_out)
 {
     Buffer *csvbuf, *csvheader;
@@ -88,7 +87,7 @@ void print_sk_metrics_csv(WebperfTest *test,
     char **dns_ok_hashes = calloc(test->nrof_elements, sizeof(char *));
     unsigned int i = 0;
     int test_status = 0;
-    char *first_server = "";
+    char *first_server = NULL;
     DNSRecord *dns_server = NULL;
     CDNProvider cdn;
     unsigned int dns_ok_hashes_n = 0;
@@ -184,7 +183,7 @@ void print_sk_metrics_csv(WebperfTest *test,
         int *lst_dns_error_iterations = calloc(test->nrof_elements,
                                                sizeof(float));
         unsigned int http_no_ip_n = 0;
-        int http_ok_n = 0, http_error_n = 0, http_ok_ssl_n = 0,
+        unsigned int http_ok_n = 0, http_error_n = 0, http_ok_ssl_n = 0,
             http_ok_connect_n = 0, http_ok_connect_ssl_n = 0;
         float avg_http_ok_connect_time = -1, avg_http_ok_ssl_connect_time = -1;
         float *lst_http_ok_connect_time = calloc(test->nrof_elements,
@@ -606,23 +605,29 @@ void print_sk_metrics_csv(WebperfTest *test,
 
         /* <FIRST SERVER> */
         buffer_insert_strlen(csvheader, "dns_server;");
-        buffer_snprintf(csvbuf, 64, "%s;", first_server);
-
+        if (first_server)
+        {
+            buffer_snprintf(csvbuf, 64, "%s;", first_server);
+        }
+        else
+        {
+            buffer_snprintf(csvbuf, 64, ";");
+        }
         /* 50% PAGE LOAD TIME */
         buffer_insert_strlen(csvheader, "page_load_time_50;");
-        buffer_snprintf(csvbuf, 64, "%f;", page_load_time(test, 50));
+        buffer_snprintf(csvbuf, 64, "%f;", page_load_time(50));
 
         /* 80% PAGE LOAD TIME */
         buffer_insert_strlen(csvheader, "page_load_time_80;");
-        buffer_snprintf(csvbuf, 64, "%f;", page_load_time(test, 80));
+        buffer_snprintf(csvbuf, 64, "%f;", page_load_time(80));
 
         /* 95% PAGE LOAD TIME */
         buffer_insert_strlen(csvheader, "page_load_time_95;");
-        buffer_snprintf(csvbuf, 64, "%f;", page_load_time(test, 95));
+        buffer_snprintf(csvbuf, 64, "%f;", page_load_time(95));
 
         /* 100% PAGE LOAD TIME */
         buffer_insert_strlen(csvheader, "page_load_time_100;");
-        buffer_snprintf(csvbuf, 64, "%f;", page_load_time(test, 100));
+        buffer_snprintf(csvbuf, 64, "%f;", page_load_time(100));
 
         /* AVG TIME TO FIRST HEADER BYTE */
         buffer_insert_strlen(csvheader, "avg_header_latency;");
@@ -673,14 +678,13 @@ void print_sk_metrics_csv(WebperfTest *test,
     buffer_free(csvbuf);
 }
 
-float page_load_time(WebperfTest *test,
-                     int completeness)
+float page_load_time(int completeness)
 {
     ElementStat *e;
     float tmp;
-    int n = test->nrof_elements;
+    unsigned int n = test->nrof_elements;
     float *sorted = calloc(n, sizeof(float));
-    int i = 0, j;
+    unsigned int i = 0, j;
     float result;
     struct timeval diff;
 

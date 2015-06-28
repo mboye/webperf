@@ -198,6 +198,7 @@ struct webperf_test
 };
 
 /* GLOBAL variable */
+extern WebperfTest *test;
 WebperfTest *test;
 
 #ifndef __cplusplus
