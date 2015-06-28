@@ -28,7 +28,7 @@ DNSCache *dns_cache_init();
 DNSRecord *dns_cache_find_rr(DNSCache *cache,
                              const char *qname,
                              DNSRecordType qtype,
-                             DNSSection section,
+                             uint8_t sections,
                              DNSMessage **msg);
 
 void dns_cache_node_add_record(DNSCache *cache,

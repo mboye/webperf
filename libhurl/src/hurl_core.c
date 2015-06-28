@@ -180,18 +180,12 @@ HURLPath *hurl_add_url(HURLManager *manager,
     /* Check if connection should use TLS. */
     tls = strcmp(parsed_url->protocol, "https") == 0 ? 1 : 0;
 
-    /* Get lock. */
     pthread_mutex_lock(&manager->lock);
-    hurl_debug(__func__, "Thread %u got lock.", (unsigned int)pthread_self());
 
     /* Get domain */
     if ((domain = hurl_get_domain(manager, parsed_url->hostname)) == NULL)
     {
-        /* Release lock. */
         pthread_mutex_unlock(&manager->lock);
-        hurl_debug(__func__,
-                   "Thread %u released lock.",
-                   (unsigned int)pthread_self());
         hurl_parsed_url_free(parsed_url);
         return NULL;
     }
@@ -199,11 +193,7 @@ HURLPath *hurl_add_url(HURLManager *manager,
     /* Get server */
     if ((server = hurl_get_server(domain, parsed_url->port, tls)) == NULL)
     {
-        /* Release lock. */
         pthread_mutex_unlock(&manager->lock);
-        hurl_debug(__func__,
-                   "Thread %u released lock.",
-                   (unsigned int)pthread_self());
         hurl_parsed_url_free(parsed_url);
         return NULL;
     }
@@ -231,26 +221,17 @@ HURLPath *hurl_add_url(HURLManager *manager,
     if ((path = calloc(1, sizeof(HURLPath))) == NULL)
     {
         /* Out of memory. */
-        /* Release lock. */
         pthread_mutex_unlock(&manager->lock);
-        hurl_debug(__func__,
-                   "Thread %u released lock.",
-                   (unsigned int)pthread_self());
         hurl_parsed_url_free(parsed_url);
         return NULL;
     }
 
     /* Copy path */
-    if ((path->path = hurl_allocstrcpy(parsed_url->path,
-                                       strlen(parsed_url->path),
-                                       1)) == NULL)
+    path->path = strdup(parsed_url->path);
+    if (!path->path && errno == ENOMEM)
     {
         /* Out of memory. */
-        /* Release lock. */
         pthread_mutex_unlock(&manager->lock);
-        hurl_debug(__func__,
-                   "Thread %u released lock.",
-                   (unsigned int)pthread_self());
         hurl_parsed_url_free(parsed_url);
         return NULL;
     }
@@ -285,11 +266,7 @@ HURLPath *hurl_add_url(HURLManager *manager,
     server->nrof_paths++;
     domain->nrof_paths++;
 
-    /* Release lock. */
     pthread_mutex_unlock(&manager->lock);
-    hurl_debug(__func__,
-               "Thread %u released lock.",
-               (unsigned int)pthread_self());
 
     hurl_parsed_url_free(parsed_url);
     return path;
@@ -324,19 +301,12 @@ int hurl_exec(HURLManager *manager)
     /* Loop until everything has been downloaded. */
     for (;;)
     {
-        /* Get lock. */
         pthread_mutex_lock(&manager->lock);
-        hurl_debug(__func__,
-                   "Thread %u got lock.",
-                   (unsigned int)pthread_self());
 
         nrof_paths = hurl_nrof_paths(manager, DOWNLOAD_STATE_PENDING);
         if (nrof_paths == 0)
         {
             pthread_mutex_unlock(&manager->lock);
-            hurl_debug(__func__,
-                       "Thread %u released lock.",
-                       (unsigned int)pthread_self());
             break;
         }
 
@@ -384,11 +354,7 @@ int hurl_exec(HURLManager *manager)
         /* Initialize thread synchronization condition: Global number of connections. */
         pthread_cond_init(&manager->condition, NULL);
 
-        /* Release lock. */
         pthread_mutex_unlock(&manager->lock);
-        hurl_debug(__func__,
-                   "Thread %u released lock.",
-                   (unsigned int)pthread_self());
 
         /* Start domain managers. */
         domain = manager->domains;
@@ -789,7 +755,9 @@ void hurl_print_status(HURLManager *manager,
     int completed = 0, failed = 0, pending = 0, total = 0;
     char *url;
     size_t url_len;
+
     pthread_mutex_lock(&manager->lock);
+
     domain = manager->domains;
     while (domain != NULL)
     {

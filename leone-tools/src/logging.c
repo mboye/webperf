@@ -10,15 +10,17 @@ void log_debug(const char *func,
 #ifndef NDEBUG
     char template[1024];
     va_list args;
+
     snprintf(template,
              sizeof template,
-             "[%u] %s(): %s\n",
-             (unsigned int )pthread_self(),
+             "%s(): %s\n",
              func,
              msg);
+
     va_start(args, msg);
     vfprintf(stderr, template, args);
     va_end(args);
+
     fflush(stderr);
 #endif
 }
@@ -30,11 +32,11 @@ void write_log(const char *func,
     FILE *fp;
     va_list args;
     char template[8192];
+
     va_start(args, msg);
     snprintf(template,
              sizeof template,
-             "[%u] %s(): %s\n",
-             (unsigned int ) pthread_self(),
+             "%s(): %s\n",
              func,
              msg);
     fp = fopen("/tmp/playback.log", "a");

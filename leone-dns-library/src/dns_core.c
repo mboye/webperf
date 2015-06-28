@@ -25,10 +25,6 @@
 #include <machine/endian.h>
 #endif
 
-#define RESPBUF_LEN 1024
-#define MAX_ERROR_COUNT 10
-#define MAX_RESPONSES 128
-
 void dns_state_reset(DNSResolverState *state)
 {
     int i;

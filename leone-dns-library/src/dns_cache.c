@@ -409,64 +409,6 @@ int dns_cache_ready(DNSCache *cache)
     return 0; /* No root NS record with A/AAAA record found. */
 }
 
-void dns_cache_reset()
-{
-    log_debug(__func__, "NOT IMPLEMENTED.");
-}
-
-void dns_cache_verify(DNSMessage *root,
-                      DNSMessage *node)
-{
-#ifndef NDEBUG
-    DNSMessage *child;
-    int i;
-    child = root;
-    /* Verify root. */
-
-    /*log_debug(__func__, "Label: %s", root->label);*/
-    fflush(stdout);
-    assert(node->label != NULL);
-    if (root != node)
-        assert(strlen(node->label) > 0);
-
-    /* Verify questions. */
-    for (i = 0; i < node->nrof_questions; i++)
-    {
-        assert(node->questions[i] != NULL);
-        assert(node->questions[i]->name != NULL);
-        assert(node->questions[i]->data != NULL);
-    }
-    /* Verify answers. */
-    for (i = 0; i < node->nrof_answers; i++)
-    {
-        assert(node->answers[i] != NULL);
-        assert(node->answers[i]->name != NULL);
-        assert(node->answers[i]->data != NULL);
-    }
-    /* Verify authorities. */
-    for (i = 0; i < node->nrof_authorities; i++)
-    {
-        assert(node->authorities[i] != NULL);
-        assert(node->authorities[i]->name != NULL);
-        assert(node->authorities[i]->data != NULL);
-    }
-    /* Verify additionals. */
-    for (i = 0; i < node->nrof_additionals; i++)
-    {
-        assert(node->additionals[i] != NULL);
-        assert(node->additionals[i]->name != NULL);
-        assert(node->additionals[i]->data != NULL);
-    }
-
-    for (i = 0; i < node->nrof_children; i++)
-    {
-        child = node->children[i];
-        assert(child != NULL);
-        dns_cache_verify(root, child);
-    }
-#endif
-}
-
 void dns_cache_print_csv(DNSMessage *root)
 {
     DNSMessage *node;
@@ -560,7 +502,7 @@ DNSCache *dns_cache_init()
 DNSRecord *dns_cache_find_rr(DNSCache *cache,
                              const char *qname,
                              DNSRecordType qtype,
-                             DNSSection section,
+                             uint8_t sections,
                              DNSMessage **msg)
 {
     DNSMessage *leaf, *root;
@@ -616,7 +558,7 @@ DNSRecord *dns_cache_find_rr(DNSCache *cache,
                 for (k = 1; k < 4; k++)
                 {
                     s = 1 << k;
-                    if (section & s)
+                    if (sections & s)
                     {
                         /* Create pointer to search section. */
                         dns_message_section(leaf,

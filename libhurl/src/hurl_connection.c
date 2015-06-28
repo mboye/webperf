@@ -268,11 +268,8 @@ void *hurl_connection_exec(void *connection_ptr)
                         break;
                     }
                 }
-                /* Get lock. */
+
                 pthread_mutex_lock(&manager->lock);
-                hurl_debug(__func__,
-                           "Thread %u got lock.",
-                           (unsigned int)pthread_self());
 
                 /* Update download states. */
                 for (i = 0; i < queue_len; i++)
@@ -293,11 +290,7 @@ void *hurl_connection_exec(void *connection_ptr)
                 /* Free queue */
                 free(queue);
 
-                /* Release lock. */
                 pthread_mutex_unlock(&manager->lock);
-                hurl_debug(__func__,
-                           "Thread %u released lock.",
-                           (unsigned int)pthread_self());
 
                 continue;
             }
@@ -333,20 +326,12 @@ void *hurl_connection_exec(void *connection_ptr)
                                            server->port);
                             }
 
-                            /* Get lock. */
                             pthread_mutex_lock(&manager->lock);
-                            hurl_debug(__func__,
-                                       "Thread %u got lock.",
-                                       (unsigned int)pthread_self());
 
                             /* Get next file to download. */
                             path = hurl_server_dequeue(server);
 
-                            /* Release lock. */
                             pthread_mutex_unlock(&manager->lock);
-                            hurl_debug(__func__,
-                                       "Thread %u released lock.",
-                                       (unsigned int)pthread_self());
                             continue;
                         }
                     }
@@ -391,9 +376,6 @@ void *hurl_connection_exec(void *connection_ptr)
                        connection->server->port);
             /* Get lock, update download state, and release lock. */
             pthread_mutex_lock(&manager->lock);
-            hurl_debug(__func__,
-                       "Thread %u got lock.",
-                       (unsigned int)pthread_self());
 
             path->state = DOWNLOAD_STATE_ERROR;
             /* Call transfer failed hook. */
@@ -406,9 +388,6 @@ void *hurl_connection_exec(void *connection_ptr)
                                                 0);
             }
             pthread_mutex_unlock(&manager->lock);
-            hurl_debug(__func__,
-                       "Thread %u released lock.",
-                       (unsigned int)pthread_self());
         }
 
         /* Get next file to download. */
@@ -419,14 +398,12 @@ void *hurl_connection_exec(void *connection_ptr)
     }
     /* Decrement active connections counter. */
     pthread_mutex_lock(&manager->lock);
-    hurl_debug(__func__, "Thread %u got lock.", (unsigned int)pthread_self());
+
     domain->manager->connections--;
     /* Notify waiting threads of change in number of connections. */
     pthread_cond_broadcast(&domain->manager->condition);
     pthread_mutex_unlock(&manager->lock);
-    hurl_debug(__func__,
-               "Thread %u released lock.",
-               (unsigned int)pthread_self());
+
     /* Free memory */
     free(buffer);
     /* End connection thread. */
@@ -1240,12 +1217,12 @@ int hurl_connection_response(HURLConnection *connection,
                         free(*buffer);
                         *buffer = NULL;
                         *data_len = 0;
+
                         /* Get lock, update download state, release lock. */
                         pthread_mutex_lock(&manager->lock);
-                        hurl_debug(__func__,
-                                   "Thread %u got lock.",
-                                   (unsigned int)pthread_self());
+
                         path->state = DOWNLOAD_STATE_ERROR;
+
                         /* Call transfer failed hook. */
                         if (manager->hook_transfer_complete)
                         {
@@ -1423,9 +1400,7 @@ int hurl_connection_response(HURLConnection *connection,
                             *data_len = 0;
                             free(redirect_location);
                             pthread_mutex_lock(&manager->lock);
-                            hurl_debug(__func__,
-                                       "Thread %u got lock.",
-                                       (unsigned int)pthread_self());
+
                             path->state = DOWNLOAD_STATE_ERROR;
                             /* Call transfer failed hook. */
                             if (manager->hook_transfer_complete)
@@ -1515,16 +1490,12 @@ int hurl_connection_response(HURLConnection *connection,
                                connection->server->port,
                                path->path,
                                content_len);
+
                     /* Get lock, update download state, release lock. */
                     pthread_mutex_lock(&manager->lock);
-                    hurl_debug(__func__,
-                               "Thread %u got lock.",
-                               (unsigned int)pthread_self());
+
                     path->state = DOWNLOAD_STATE_COMPLETED;
                     pthread_mutex_unlock(&manager->lock);
-                    hurl_debug(__func__,
-                               "Thread %u released lock.",
-                               (unsigned int)pthread_self());
 
                 }
                 else if (chunked_encoding)
@@ -1762,9 +1733,6 @@ int hurl_connection_response(HURLConnection *connection,
         path->state = DOWNLOAD_STATE_PENDING;
     }
     pthread_mutex_unlock(&manager->lock);
-    hurl_debug(__func__,
-               "Thread %u released lock.",
-               (unsigned int)pthread_self());
 
     free(*buffer);
     *buffer = NULL;

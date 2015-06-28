@@ -11,15 +11,17 @@ void hurl_debug(const char *func,
 #ifndef NDEBUG
     char template[1024];
     va_list args;
+
     snprintf(template,
              sizeof template,
-             "[%u] %s(): %s\n",
-             (unsigned int )pthread_self(),
+             "%s(): %s\n",
              func,
              msg);
+
     va_start(args, msg);
     vfprintf(stderr, template, args);
     va_end(args);
+
     fflush(stderr);
 #endif
 }
@@ -35,6 +37,7 @@ char *hurl_allocstrcpy(const char *str,
         {
             exit(EXIT_FAILURE);
         }
+
         memcpy(newstr, str, str_len);
         return newstr;
     }
