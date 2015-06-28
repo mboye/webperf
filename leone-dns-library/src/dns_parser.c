@@ -264,7 +264,17 @@ char dns_message_parse(DNSResolverState *state,
                     }
                     cacheable = 0;
                     break;
-                default:
+                case ANY:
+                case PTR:
+                case HINFO:
+                case MINFO:
+                case TXT:
+                case MX:
+                case OPT:
+                case A_AAAA:
+                case A_AAAA_CNAME:
+                case A_CNAME:
+                case AAAA_CNAME:
                     cursor += record->data_len;
                     log_debug(__func__,
                               "Ignoring unsupported record type: %d",
@@ -585,9 +595,8 @@ void record_debug(const char *func,
 #ifndef NDEBUG
     char ipaddr[INET6_ADDRSTRLEN];
     int af;
-    char *section;
+    const char *section;
 
-    /* Determine section. */
     switch (record->section)
     {
         case QUESTIONS:
@@ -602,7 +611,8 @@ void record_debug(const char *func,
         case ADDITIONALS:
             section = "ADDITIONALS";
             break;
-        default:
+        case NOT_QUESTIONS:
+        case ALL:
             section = "OTHER?!";
             break;
     }

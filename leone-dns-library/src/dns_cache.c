@@ -747,9 +747,10 @@ void dns_cache_node_add_record(DNSCache *cache,
                 log_debug(__func__, "WARNING: 	ADDITIONALS section is full.");
             }
             break;
-        default:
-            log_debug(__func__, "WARNING: Unknown message section.");
-            break;
+        case QUESTIONS:
+        case ALL:
+        case NOT_QUESTIONS:
+            abort();
     }
 }
 

@@ -490,11 +490,9 @@ void dns_message_section(DNSMessage *msg,
             *bgof_section = msg->additionals;
             *nrof_records = msg->nrof_additionals;
             break;
-        default:
-            log_debug(__func__, "WARNING: Unsupported section."); /* This should never happen. */
-            *bgof_section = msg->answers;
-            *nrof_records = msg->nrof_answers;
-            break;
+        case ALL:
+        case NOT_QUESTIONS:
+            abort();
     }
 }
 
@@ -531,10 +529,9 @@ int dns_count_rr(DNSRecordType type,
                     records = msg->additionals;
                     nrof_records = msg->nrof_additionals;
                     break;
-                default:
-                    /* This should never happen. */
-                    log_debug(__func__, "WARNING: Default case entered.");
-                    exit(1);
+                case ALL:
+                case NOT_QUESTIONS:
+                    abort();
             }
             /* Count records based on their type. */
             for (j = 0; j < nrof_records; j++)
