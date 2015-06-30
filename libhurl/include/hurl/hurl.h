@@ -14,7 +14,7 @@
 #endif
 
 #ifndef timeval_to_msec
-#define timeval_to_msec(t) (float)((t)->tv_sec * 1000 + (float) (t)->tv_usec / 1e3)
+#define timeval_to_msec(t) (double)((t)->tv_sec * 1e3 + (double) (t)->tv_usec / 1e3)
 #endif
 
 #define HURL_MAX_CONNECTIONS 16 /* Overall connection limit. */

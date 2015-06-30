@@ -7,17 +7,18 @@
 #include "webperf.h"
 #include "sk_metrics.h"
 
-float median_float(float *values,
-                   unsigned int n)
+double median_double(double *values,
+                    unsigned int n)
 {
     unsigned int i, j;
-    float *sorted = malloc(sizeof(float) * n);
-    float tmp;
+    double *sorted = malloc(sizeof(float) * n);
+    double tmp;
 
     if (n == 0)
     {
         return -1;
     }
+
     memcpy(sorted, values, sizeof(float) * n);
     for (i = 0; i < n; i++)
     {
@@ -43,8 +44,8 @@ float median_float(float *values,
     }
 }
 
-float median_int(int *values,
-                 unsigned int n)
+double median_int(int *values,
+                  unsigned int n)
 {
     unsigned int i, j;
     int *sorted = malloc(sizeof(int) * n);
@@ -175,37 +176,37 @@ void print_sk_metrics_csv(int interrupted,
     {
         unsigned int http_n = 0, https_n = 0;
         unsigned int dns_ok_n = 0, dns_error_n = 0;
-        float avg_dns_ok_time = -1, avg_dns_error_time = -1;
-        float *lst_dns_ok_time = calloc(test->nrof_elements, sizeof(float));
-        float *lst_dns_error_time = calloc(test->nrof_elements, sizeof(float));
-        float avg_dns_ok_iterations = -1, avg_dns_error_iterations = -1;
+        double avg_dns_ok_time = -1, avg_dns_error_time = -1;
+        double *lst_dns_ok_time = calloc(test->nrof_elements, sizeof(float));
+        double *lst_dns_error_time = calloc(test->nrof_elements, sizeof(float));
+        double avg_dns_ok_iterations = -1, avg_dns_error_iterations = -1;
         int *lst_dns_ok_iterations = calloc(test->nrof_elements, sizeof(float));
         int *lst_dns_error_iterations = calloc(test->nrof_elements,
                                                sizeof(float));
         unsigned int http_no_ip_n = 0;
         unsigned int http_ok_n = 0, http_error_n = 0, http_ok_ssl_n = 0,
             http_ok_connect_n = 0, http_ok_connect_ssl_n = 0;
-        float avg_http_ok_connect_time = -1, avg_http_ok_ssl_connect_time = -1;
-        float *lst_http_ok_connect_time = calloc(test->nrof_elements,
+        double avg_http_ok_connect_time = -1, avg_http_ok_ssl_connect_time = -1;
+        double *lst_http_ok_connect_time = calloc(test->nrof_elements,
                                                  sizeof(float));
-        float *lst_http_ok_ssl_connect_time = calloc(test->nrof_elements,
+        double *lst_http_ok_ssl_connect_time = calloc(test->nrof_elements,
                                                      sizeof(float));
-        float avg_http_ok_download_time = -1;
-        float *lst_http_ok_download_time = calloc(test->nrof_elements,
+        double avg_http_ok_download_time = -1;
+        double *lst_http_ok_download_time = calloc(test->nrof_elements,
                                                   sizeof(float));
-        float avg_http_ok_download_size = -1;
-        float *lst_http_ok_download_size = calloc(test->nrof_elements,
+        double avg_http_ok_download_size = -1;
+        double *lst_http_ok_download_size = calloc(test->nrof_elements,
                                                   sizeof(float));
-        float avg_https_ok_download_time = -1;
-        float *lst_https_ok_download_time = calloc(test->nrof_elements,
+        double avg_https_ok_download_time = -1;
+        double *lst_https_ok_download_time = calloc(test->nrof_elements,
                                                    sizeof(float));
-        float avg_https_ok_download_size = -1;
-        float *lst_https_ok_download_size = calloc(test->nrof_elements,
+        double avg_https_ok_download_size = -1;
+        double *lst_https_ok_download_size = calloc(test->nrof_elements,
                                                    sizeof(float));
-        float avg_ttfb_header = -1;
-        float *lst_ttfb_header = calloc(test->nrof_elements, sizeof(float));
-        float avg_ttfb_body = -1;
-        float *lst_ttfb_body = calloc(test->nrof_elements, sizeof(float));
+        double avg_ttfb_header = -1;
+        double *lst_ttfb_header = calloc(test->nrof_elements, sizeof(float));
+        double avg_ttfb_body = -1;
+        double *lst_ttfb_body = calloc(test->nrof_elements, sizeof(float));
         unsigned int http_redirects = 0;
         int dns_success = 0;
         CDNProvider element_cdn;
@@ -486,7 +487,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_dns_ok_time, dns_ok_n));
+                        median_double(lst_dns_ok_time, dns_ok_n));
 
         /* <AVG ITERATIONS FOR SUCCESSFUL LOOKUPS> */
         buffer_insert_strlen(csvheader, "avg_dns_ok_iterations;");
@@ -508,7 +509,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_dns_error_time, dns_error_n));
+                        median_double(lst_dns_error_time, dns_error_n));
 
         /* <AVG ITERATIONS FOR FAILED LOOKUPS> */
         buffer_insert_strlen(csvheader, "avg_dns_error_iterations;");
@@ -542,7 +543,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_http_ok_connect_time,
+                        median_double(lst_http_ok_connect_time,
                                      http_ok_connect_n));
 
         /* <AVG SSL CONNECT TIME OF COMPLETED DOWNLOADS> */
@@ -554,7 +555,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_http_ok_ssl_connect_time,
+                        median_double(lst_http_ok_ssl_connect_time,
                                      http_ok_connect_ssl_n));
 
         /* <AVG DOWNLOAD TIME OF COMPLETED DOWNLOADS>  */
@@ -566,7 +567,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_http_ok_download_time, http_ok_n));
+                        median_double(lst_http_ok_download_time, http_ok_n));
 
         /* <AVG FILE SIZE OF COMPLETED DOWNLOADS>  */
         buffer_insert_strlen(csvheader, "avg_http_ok_download_size;");
@@ -577,7 +578,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_http_ok_download_size, http_ok_n));
+                        median_double(lst_http_ok_download_size, http_ok_n));
 
         /* <HTTPS AVG DOWNLOAD TIME OF COMPLETED DOWNLOADS>  */
         buffer_insert_strlen(csvheader, "avg_https_ok_download_time;");
@@ -588,7 +589,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_https_ok_download_time,
+                        median_double(lst_https_ok_download_time,
                                      http_ok_ssl_n));
 
         /* <httpsS AVG FILE SIZE OF COMPLETED DOWNLOADS>  */
@@ -600,7 +601,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_https_ok_download_size,
+                        median_double(lst_https_ok_download_size,
                                      http_ok_ssl_n));
 
         /* <FIRST SERVER> */
@@ -638,7 +639,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f;",
-                        median_float(lst_ttfb_header, http_ok_n));
+                        median_double(lst_ttfb_header, http_ok_n));
 
         /* AVG TIME TO BODY HEADER BYTE */
         buffer_insert_strlen(csvheader, "avg_body_latency;");
@@ -649,7 +650,7 @@ void print_sk_metrics_csv(int interrupted,
         buffer_snprintf(csvbuf,
                         64,
                         "%f",
-                        median_float(lst_ttfb_body, http_ok_n));
+                        median_double(lst_ttfb_body, http_ok_n));
 
 #ifndef NDEBUG
         if (cdn == CDN_NONE)
@@ -678,14 +679,14 @@ void print_sk_metrics_csv(int interrupted,
     buffer_free(csvbuf);
 }
 
-float page_load_time(int completeness)
+double page_load_time(int completeness)
 {
     ElementStat *e;
-    float tmp;
+    double tmp;
     unsigned int n = test->nrof_elements;
-    float *sorted = calloc(n, sizeof(float));
+    double *sorted = calloc(n, sizeof(float));
     unsigned int i = 0, j;
-    float result;
+    double result;
     struct timeval diff;
 
     assert(test->manager->bgof_exec.tv_sec != 0
@@ -701,7 +702,7 @@ float page_load_time(int completeness)
         assert(e->end_transfer.tv_sec != 0 && e->end_transfer.tv_usec != 0);
         timersub(&e->end_transfer, &test->manager->bgof_exec, &diff);
         sorted[i] = timeval_to_msec(&diff);
-        /* log_debug(__func__, "Element was loaded after %f ms", sorted[i]); */
+
         assert(sorted[i] > 0);
         i++;
     }
@@ -720,7 +721,7 @@ float page_load_time(int completeness)
         }
     }
 
-    i = (float)completeness * (float)(n - 1) / 100.0f;
+    i = (unsigned int)((float)completeness * (float)(n - 1) / 100.0f);
     result = sorted[i];
     log_debug(__func__,
               "%d %% of the elements were downloaded in %f ms.",

@@ -369,7 +369,7 @@ int dns_cache_load(DNSCache **cache,
                 record = dns_record_create(record_type,
                                            name,
                                            rdata,
-                                           strlen(rdata),
+                                           (unsigned short)strlen(rdata),
                                            DNS_DEFAULT_TTL,
                                            record_section);
             }

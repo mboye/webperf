@@ -18,6 +18,7 @@
 #include "dns_cache.h"
 #include "dns_support.h"
 #include "leone_tools.h"
+#include <stdint.h>
 
 #ifdef __linux
 #include <endian.h>
@@ -70,36 +71,6 @@ void dns_cache_node_free(DNSMessage *node)
     }
 }
 
-int dns_trail(char *domain,
-              char **domain_trail)
-{
-    unsigned int i;
-    for (i = 0; domain_trail[i] != NULL && i < DNS_MAX_DOMAINS; i++)
-    {
-        if (strcasecmp(domain_trail[i], domain) == 0)
-        {
-            /* Match found. Return trail value. */
-            return 1 << i;
-        }
-    }
-    if (i == DNS_MAX_DOMAINS)
-        return -1;
-    /* No queries have been sent for this domain. */
-    domain_trail[i] = allocstrcpy(domain, strlen(domain), 1);
-    log_debug(__func__, "New trail bit of '%s' is %u", domain, 1 << i);
-    return 1 << i;
-}
-
-void dns_trail_free(char **domain_trail)
-{
-    unsigned int i;
-    for (i = 0; domain_trail[i] != NULL && i < DNS_MAX_DOMAINS; i++)
-    {
-        free(domain_trail[i]);
-    }
-
-}
-
 unsigned int dns_domain_id(DNSCache *cache,
                            char *domain)
 {
@@ -114,9 +85,9 @@ unsigned int dns_domain_id(DNSCache *cache,
     }
 }
 
-int dns_detect_domain_loop(DNSCache *cache,
-                           unsigned int domain_trail[],
-                           char *qname)
+static int dns_detect_domain_loop(DNSCache *cache,
+                                  unsigned int domain_trail[],
+                                  char *qname)
 {
     DNSMessage *message;
     int i = 0;
@@ -139,7 +110,7 @@ int dns_detect_domain_loop(DNSCache *cache,
     }
 }
 
-int dns_detect_record_loop(DNSRecord *record,
+static int dns_detect_record_loop(DNSRecord *record,
                            unsigned int record_trail[])
 {
     int i;
@@ -175,8 +146,8 @@ int dns_queue_find(DNSQueryQueue *queue,
 
 }
 
-void dns_record_trail_mark(DNSQueryQueue *queue_top,
-                           DNSRecord *record)
+static void dns_record_trail_mark(DNSQueryQueue *queue_top,
+                                  DNSRecord *record)
 {
     if (queue_top->trail_offset + 1 < LEONE_DNS_MAX_RECORD_TRAIL)
     {
@@ -198,7 +169,7 @@ int dns_resolve(DNSCache *cache,
     int i, sock, j;
     int send_count;
     DNSRecord *ns, **best_destination_nwp, *destination;
-    unsigned char nrof_best_destinations;
+    int nrof_best_destinations;
     unsigned short flags = 0;
     char *qpacket;
     unsigned short qpacket_len, qpacket_id;
@@ -531,8 +502,9 @@ int dns_resolve(DNSCache *cache,
                     state->nrof_queries++;
 
                     /* Connect to socket in order to receive ICMP errors. */
-                    if (connect(sock, (struct sockaddr *)&destination_addr,
-                                destination_len) != 0)
+                    if (connect(sock,
+                                (struct sockaddr *)&destination_addr,
+                                (socklen_t)destination_len) != 0)
                     {
                         log_debug(__func__, "connect(): %s", strerror(errno));
                         /* Mark A/AAAA record as broken. */
@@ -576,7 +548,7 @@ int dns_resolve(DNSCache *cache,
                                     break;
                                 case 1:
                                     /* Ready to receive data. */
-                                    if ((respbuf_len = recv(sock, respbuf,
+                                    if ((respbuf_len = (int)recv(sock, respbuf,
                                                             sizeof(respbuf),
                                                             MSG_DONTWAIT))
                                         != -1)
@@ -615,7 +587,7 @@ int dns_resolve(DNSCache *cache,
                                             last_response->rtt =
                                                 timeval_to_msec(
                                                                 &tm_diff);
-                                            last_response->pksize = respbuf_len;
+                                            last_response->pksize = (int)respbuf_len;
                                             /* Parse response. */
                                             if ((parser_retval =
                                                 dns_message_parse(
@@ -753,7 +725,7 @@ int dns_resolve(DNSCache *cache,
                         else
                         {
                             log_debug(__func__, "send(): %s", strerror(errno));
-                            usleep(state->timeout[send_count]);
+                            usleep((useconds_t)state->timeout[send_count]);
                             send_count++;
                         }
                     }
@@ -833,7 +805,7 @@ char *dns_record_rdata_str(DNSRecord *record)
 {
     char *result = NULL, *tmp = NULL;
     DNSRecordSOA *soa;
-    unsigned int result_len;
+    size_t result_len;
     assert(record!=NULL);
     if (record->type == A || record->type == AAAA)
     {
@@ -889,59 +861,10 @@ char *dns_record_rdata_str(DNSRecord *record)
     }
 }
 
-char *dns_cache_domain(DNSMessage *node)
+static uint8_t dns_split_name(char *name,
+                              char *labels[])
 {
-    char *domain;
-    char *domain_ptr;
-    unsigned char label_len;
-    DNSMessage *parent;
-    assert(node != NULL);
-    domain = calloc(DNS_MAX_DOMAIN_LENGTH + 1, sizeof(char));
-    domain_ptr = domain;
-    if (node->parent == NULL)
-    {
-        snprintf(domain, DNS_MAX_DOMAIN_LENGTH + 1, "<root>");
-    }
-    else
-    {
-        parent = node;
-        while (parent != NULL)
-        {
-            label_len = strlen(parent->label);
-            memcpy(domain_ptr, parent->label, label_len);
-            domain_ptr += label_len;
-            if (parent->parent != NULL)
-                memcpy(domain_ptr++, ".", 1);
-            parent = parent->parent;
-        }
-    }
-    return domain;
-}
-
-/*
- int dns_domain_labels_count(char *domain) {
- int i;
- char *label, *tmp, *domain_copy;
- int nrof_labels;
- char *labels[127];
- domain_copy = allocstrcpy(domain, strlen(domain), 1);
- tmp = domain_copy;
- i = 0;
- while ((label = strtok(tmp, ".")) != NULL) {
- if (tmp != NULL)
- tmp = NULL;
- i++;
- }
- free(domain_copy);
- nrof_labels
- return i;
- }
- */
-
-int dns_split_name(char *name,
-                   char *labels[])
-{
-    int nrof_labels = 0;
+    uint8_t nrof_labels = 0;
     char *name_tmp, *name_split_ptr = NULL, *label;
     name_tmp = strdup(name);
     while ((label = strtok_r(name_tmp, ".", &name_split_ptr)) != NULL)
@@ -964,7 +887,7 @@ int dns_domain_similarity(char *domain_a,
                           char *domain_b)
 {
     char *labels_a[DNS_MAX_LABELS], *labels_b[DNS_MAX_LABELS];
-    unsigned char nrof_labels_a, nrof_labels_b;
+    uint8_t nrof_labels_a, nrof_labels_b;
     int a, b;
     int similarity = 1; /* Domains always have <root> in common so min. similarity is 1. */
 
@@ -988,42 +911,33 @@ int dns_domain_similarity(char *domain_a,
             break;
         }
     }
-    /*
-     free(tmp_a);
-     free(tmp_b);
-     */
+
     log_debug(__func__, "'%s' and '%s' have %d labels in common.", domain_a,
               domain_b,
               similarity);
+
     return similarity;
 
 }
 
-unsigned char dns_count_labels(char *domain)
+uint8_t dns_count_labels(char *domain)
 {
     int i = 0;
     char *labels[DNS_MAX_LABELS];
-    /* char *copy, *domain_tmp, *label; */
-    int nrof_labels;
+
+    uint8_t nrof_labels;
     if (strlen(domain) == 0 || strcmp(domain, ".") == 0)
     {
         return 0;
     }
-    /*
-     copy = allocstrcpy(domain, strlen(domain), 1);
-     domain_tmp = copy;
-     while ((label = strtok(domain_tmp, ".")) != NULL) {
-     if (domain_tmp != NULL)
-     domain_tmp = NULL;
-     i++;
-     }
-     free(copy);
-     */
+
     nrof_labels = dns_split_name(domain, labels);
+    //TODO: Write helper function
     for (i = 0; i < nrof_labels; i++)
     {
         free(labels[i]);
     }
+
     return nrof_labels;
 }
 
@@ -1032,16 +946,18 @@ char *dns_cat_labels(char **labels,
                      char end_label)
 {
     char *domain = malloc(sizeof(char) * (DNS_MAX_DOMAIN_LENGTH + 1));
-    int i, offset = 0, label_len;
+    int i, offset = 0;
+    uint8_t label_len;
     for (i = start_label; i < end_label; i++)
     {
-        label_len = strlen(labels[i]);
+        label_len = (uint8_t)strlen(labels[i]);
         memcpy(domain + offset, labels[i], label_len);
         offset += label_len;
         domain[offset] = '.';
         offset++;
     }
     domain[offset - 1] = '\0';
+
     return domain;
 }
 
@@ -1122,11 +1038,10 @@ DNSResolverState *dns_state_init()
     ns->data = allocstrcpy(DNS_FAKE_ROOT_SERVER_NAME,
                            strlen(DNS_FAKE_ROOT_SERVER_NAME),
                            1);
-    ns->data_len = strlen(ns->data);
+    ns->data_len = (uint16_t)strlen(ns->data);
     ns->record_id = 1; /* Reserved record ID */
 
     state->recursive_authority.nrof_authorities = 1;
 
     return state;
-
 }

@@ -13,12 +13,10 @@
 #include <unistd.h>
 #include "dns_cache.h"
 
-unsigned int debug_counter = 0;
-
 char dns_message_parse(DNSResolverState *state,
                        DNSCache *cache,
                        char *respbuf,
-                       unsigned int respbuf_len,
+                       int respbuf_len,
                        char *qname)
 {
     char *cursor = respbuf, *cursor_max;
@@ -290,18 +288,7 @@ char dns_message_parse(DNSResolverState *state,
                 /* TODO: Check if record comes from a credible source. */
                 dns_cache_add_rr(cache, record);
             }
-            debug_counter++;
         }
-        /* Verify that the response matches QNAME. */
-        /*
-         else {
-
-         if (strcasecmp(record->name, qname) != 0) {
-         log_debug(__func__, "Received response that did not match QNAME of query: '%s' != '%s'", qname, record->name);
-         return DNS_PROTOCOL_ERROR;
-         }
-         }
-         */
     }
 #ifndef NDEBUG
     /* Check if end of response has been reached. */

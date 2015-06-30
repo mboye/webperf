@@ -17,9 +17,10 @@
 #define DNS_FAKE_ROOT_SERVER_NAME "recursive-dns-server"
 #define DNS_DEFAULT_TTL 3600
 
-unsigned short dns_message_nwp(DNSMessage *msg,
-                               NetworkPreference nwp,
-                               DNSRecord ***nwp_records);
+int dns_message_nwp(DNSMessage *msg,
+                    NetworkPreference nwp,
+                    DNSRecord ***nwp_records);
+
 unsigned int chars_to_int(char *bgof_value);
 unsigned short chars_to_short(char *bgof_value);
 unsigned short chars_to_short(char *bgof_value);
@@ -87,7 +88,7 @@ DNSRecord *dns_record_create(DNSRecordType type,
 char dns_message_parse(DNSResolverState *state,
                        DNSCache *cache,
                        char *respbuf,
-                       unsigned int respbuf_len,
+                       int respbuf_len,
                        char *qname);
 
 char dns_parse_questions(char *respbuf,

@@ -178,9 +178,9 @@ unsigned int chars_to_int(char *bgof_value)
 }
 
 /* Order records in ANSWER and ADDITIONAL by network preference. */
-unsigned short dns_message_nwp(DNSMessage *msg,
-                               NetworkPreference nwp,
-                               DNSRecord ***nwp_records)
+int dns_message_nwp(DNSMessage *msg,
+                    NetworkPreference nwp,
+                    DNSRecord ***nwp_records)
 {
     char done = 0;
     int i;

@@ -122,7 +122,7 @@ struct dns_record
     DNSRecordType type;
     unsigned int ttl;
     char *data;
-    unsigned short data_len;
+    uint16_t data_len;
     unsigned int offset; /* Offset of record with respect to beginning of DNS message. */
     DNSRecord *question; /* The question this record is an answer to. */
     DNSRecord *answer; /* The A/AAAA record belonging to this question/CNAME. */
@@ -154,8 +154,8 @@ struct dns_message
     unsigned short nrof_questions, nrof_answers, nrof_authorities,
         nrof_additionals;
     /* DNS performance information. */
-    float rtt;
-    unsigned int pksize;
+    double rtt;
+    int pksize;
     DNSQuery *query;
 };
 
@@ -194,7 +194,7 @@ struct dns_resolver_state
     unsigned short nrof_responses; /* Number of received responses. */
     unsigned short nrof_queries; /* Number of sent queries. */
     NetworkPreference nwp; /* Network preference. */
-    unsigned int timeout[DNS_MAX_SEND_COUNT]; /* Receive timeout. */
+    int timeout[DNS_MAX_SEND_COUNT]; /* Receive timeout. */
     unsigned short recurse; /* Send queries with "Recursion desired" set. */
     DNSMessage recursive_authority;
     struct
