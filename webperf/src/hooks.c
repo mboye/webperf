@@ -23,7 +23,7 @@ char *json_escape(char *str);
 void cdn_detect(ElementStat *stat,
                 DNSResolverState *dns_state);
 
-void stat_set_dns_trigger(HURLPath *path,
+static void stat_set_dns_trigger(HURLPath *path,
                           HURLConnection *connection)
 {
     ElementStat *stat = (ElementStat *)path->tag;
@@ -209,7 +209,7 @@ void stat_header_received(HURLPath *path,
     buffer_insert_strlen(json, "{");
 
     stat->http->response_code = response_code;
-    stat->http->header_size = header_len;
+    stat->http->header_size = (int)header_len;
 
     /* Check if header data should be ignored. */
 
@@ -546,7 +546,7 @@ void stat_transfer_complete(HURLPath *path,
     /* Save overhead size - HTTP header + chunking  */
     stat->http->overhead = overhead;
 
-    /* Save tranfer result code */
+    /* Save transfer result code */
     stat->http->result = result;
 
 #ifdef __linux__
@@ -600,45 +600,12 @@ void stat_request_sent(HURLPath *path,
     }
 }
 
-char *path_filename(HURLPath *path)
-{
-    char *tmp = NULL;
-    char filename[PATH_MAX];
-    size_t j = 0;
-    size_t path_len = strlen(path->path);
-    if (!getcwd(filename, sizeof(filename)))
-    {
-        return NULL;
-    }
-    j = strlen(filename);
-    filename[j++] = '/';
-    filename[j] = '\0';
-    for (size_t i = 1; i < path_len; i++)
-    {
-        if (path->path[i] == '/' || isspace(path->path[i])
-            || isblank(path->path[i]))
-        {
-            filename[j++] = '-';
-        }
-        else
-        {
-            filename[j++] = path->path[i];
-        }
-    }
-    /* Optimize memory allocation */
-    tmp = allocstrcpy(filename, j, 1);
-    return tmp;
-}
-
-/**
- * save the body of the elements
- */
 void stat_body_recv(HURLPath *path,
                     char *data,
                     size_t data_len)
 {
     char *filename;
-    int filename_len;
+    size_t filename_len;
     ElementStat *stat = (ElementStat *)path->tag;
 
     assert(stat->no_hostname || (!stat->dns_trigger && stat->dns)

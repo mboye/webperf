@@ -63,8 +63,8 @@ typedef struct dns_stat DNSStat;
 struct dns_stat
 {
     int return_code;
-    float network_time;
-    float exec_time;
+    double network_time;
+    double exec_time;
     size_t data_tx, data_rx;
     int msg_tx, msg_rx;
     int queries;
@@ -80,9 +80,9 @@ struct dns_stat
 typedef struct http_stat HTTPStat;
 struct http_stat
 {
-    float connect_time, connect_time_ssl;
+    double connect_time, connect_time_ssl;
     int connect_result;
-    float download_time, ready_time;
+    double download_time, ready_time;
     unsigned long download_size;
     unsigned long overhead;
     char *content_type;
@@ -92,7 +92,7 @@ struct http_stat
     time_t date;
     time_t expiry_date;
     int response_code;
-    unsigned int header_size;
+    int header_size;
     int connection_reused;
     int pipelined;
     char *headers;
@@ -103,7 +103,7 @@ struct http_stat
     int tls;
     char *domain, *path;
     unsigned short port;
-    float bgof_header, bgof_body;
+    double bgof_header, bgof_body;
     size_t header_len;
     HURLTransferResult result;
 };
