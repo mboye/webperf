@@ -11,7 +11,8 @@ code_review=0
 verified=-1
 
 COMMENTS="$WORKSPACE/review-comments.txt"
-BUILD_LOG="$WORKSPACE/build.log"
+BUILD_LOG_CLANG="$WORKSPACE/build-clang.log"
+BUILD_LOG_GCC="$WORKSPACE/build-gcc.log"
 
 git log -1
 
@@ -20,12 +21,17 @@ if [ $(cat $COMMENTS | wc -l) -ne 0 ]; then
     code_review=-1
 fi
 
-echo "Build log: $BUILD_LOG"
+echo "Build log: $BUILD_LOG_CLANG"
 
-export CC=clang
-export CFLAGS="-Weverything -Wno-padded"
-export DEBUG=yes
-if make all > $BUILD_LOG 2>&1 && $WORKSPACE/webperf/ft/run-all-tests.sh
+build_clang() {
+    make CC=clang CFLAGS="-Weverything -Wno-padded" DEBUG=yes clean all > $BUILD_LOG_CLANG 2>&1
+}
+
+build_gcc() {
+    make CC=gcc CFLAGS="-Wextra" DEBUG=yes clean all > $BUILD_LOG_GCC 2>&1
+}
+
+if build_clang && build_gcc && $WORKSPACE/webperf/ft/run-all-tests.sh
 then
     echo "Build successful."
     verified=1
