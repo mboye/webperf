@@ -871,7 +871,7 @@ void hurl_manager_free(HURLManager *manager)
 #endif
 }
 
-float record_time_msec(struct timeval *begin)
+double record_time_msec(struct timeval *begin)
 {
     struct timeval end;
     struct timeval diff;

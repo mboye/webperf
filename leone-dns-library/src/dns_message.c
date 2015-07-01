@@ -175,9 +175,9 @@ void dns_message_free(DNSMessage *msg)
 /* Sets flag bits and response code.
  * flags is a bitset, flag is the bit that should be set/read,
  * and value is the value to set the flag to. */
-unsigned short dns_message_flag(unsigned short *flags,
-                                enum dns_flags flag,
-                                unsigned short value)
+int dns_message_flag(unsigned short *flags,
+                     enum dns_flags flag,
+                     unsigned short value)
 {
     unsigned short flag_value = 0;
     int shift = 0;
@@ -265,8 +265,12 @@ void dns_create_packet(char *qname,
 
     /* Set transaction ID. */
     gettimeofday(&tm_seed, NULL);
-    seed = strlen(qname) + tm_seed.tv_usec + (int)qtype;
+    seed = (unsigned int)strlen(qname) +
+           (unsigned int)tm_seed.tv_usec +
+           (unsigned int)qtype;
+
     srand(seed);
+
     *id = (unsigned short)rand();
 
     /* Modify flags. ONLY create query messages. */

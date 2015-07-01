@@ -38,9 +38,9 @@ void dns_message_add_record(DNSMessage *msg,
                             DNSRecord *record,
                             char increment_nrof);
 
-unsigned short dns_message_flag(unsigned short *flags,
-                                enum dns_flags flag,
-                                unsigned short value);
+int dns_message_flag(unsigned short *flags,
+                     enum dns_flags flag,
+                     unsigned short value);
 
 DNSRecord *dns_message_find_question(DNSMessage *msg,
                                      char *name);

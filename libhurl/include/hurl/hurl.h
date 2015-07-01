@@ -371,7 +371,7 @@ struct hurl_manager
     pthread_cond_t condition; /* Condition for accessing connections variable. */
     HURLHeader *headers; /* Linked list of headers to include in HTTP requests. */
     struct timeval bgof_exec; /* When did the download process begin? */
-    float exec_time; /* When did the download process begin? */
+    double exec_time; /* When did the download process begin? */
     char *ca_path; /* Path to CA store for OpenSSL. */
     char *ca_file; /* Path to CA file for OpenSSL. */
 };
@@ -505,6 +505,6 @@ int hurl_parse_response_code(char *line,
 unsigned char split_domain_name(char *name,
                                 char *labels[]);
 
-float record_time_msec(struct timeval *begin);
+double record_time_msec(struct timeval *begin);
 
 #endif /* INCLUDE_HURL_H_ */

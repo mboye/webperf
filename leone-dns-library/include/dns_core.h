@@ -144,7 +144,7 @@ struct dns_message
     /* DNS header */
     unsigned short id;
     enum dns_message_type type;
-    unsigned char authoritative, truncation, recursion_desired, recursion_avail,
+    int authoritative, truncation, recursion_desired, recursion_avail,
         response_code;
     /* DNS records. */
     DNSRecord *questions[DNS_MAX_SECTION_RECORDS],
