@@ -1,5 +1,8 @@
-CC ?= clang
+CC := clang
 override CFLAGS += -Wall -Wextra -pedantic -std=gnu99
+
+CPP := clang++
+override CPPFLAGS += -Wall -pedantic
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -10,49 +13,42 @@ endif
 
 ifeq ($(DEBUG), yes)
     override CFLAGS += -g3
+    override CPPFLAGS += -g3
 else
     override CFLAGS += -Os
+    override CPPFLAGS += -Os
 endif
 
-HURL_OBJS = $(patsubst %.c, %.o, $(wildcard libhurl/src/*.c))
-DNS_OBJS = $(patsubst %.c, %.o, $(wildcard leone-dns-library/src/*.c))
-TOOLS_OBJS = $(patsubst %.c, %.o, $(wildcard leone-tools/src/*.c))
-WEBPERF_OBJS = $(patsubst %.c, %.o, $(wildcard webperf/src/*.c))
-WEBPERF_DEPS = $(HURL_OBJS) $(DNS_OBJS) $(TOOLS_OBJS)
+GMOCK=gmock-1.7.0
+GTEST=$(GMOCK)/gtest
+GTEST_A=$(GTEST)/lib/.libs/libgtest.a
+GMOCK_A=$(GMOCK)/lib/.libs/libgmock.a
 
-ALL_SRC=$(wildcard */src/*.c)
-ALL_OBJ=$(ALL_SRC:%.c=%.o)
+all: webperf/webperf
+
+include leone-tools/Dir.mk
+include leone-dns-library/Dir.mk
+include libhurl/Dir.mk
+include webperf/Dir.mk
 
 INCLUDES = -I leone-tools/include \
            -I leone-dns-library/include \
            -I libhurl/include \
            -I webperf/include
 
-WEBPERF_LIBS += -lm -lssl -lcrypto
-
-all: webperf/webperf
-
-webperf/webperf: .hurl .dns .tools $(WEBPERF_OBJS)
-	$(CC) -MMD $(CFLAGS) $(INCLUDES) -o $@ \
-		$(WEBPERF_DEPS) $(WEBPERF_OBJS) $(WEBPERF_LIBS)
-	@echo
-	@echo "Output binary: $@"
-
-.tools: $(TOOLS_OBJS)
-	touch $@
-
-.dns: $(DNS_OBJS)
-	touch $@
-
-.hurl: $(HURL_OBJS)
+.ut-setup:
+	wget -c https://googlemock.googlecode.com/files/gmock-1.7.0.zip
+	unzip gmock-1.7.0.zip
+	cd gmock-1.7.0 && \
+	./configure CXX="clang++ -std=c++11 -stdlib=libc++ -DGTEST_USE_OWN_TR1_TUPLE=1" && \
+	make
 	touch $@
 
 %.o: %.c
 	$(CC) -MMD $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-clean:
-	rm -f $(ALL_SRC:%.c=%.o)
-	rm -f $(ALL_SRC:%.c=%.d)
-	rm -f webperf/webperf
+%.obj: %.cpp
+	$(CPP) -MMD $(CPPFLAGS) $(INCLUDES) -c -o $@ $<
 
--include $(ALL_SRC:%.c=%.d)
+clean:
+	rm -f $(TRASH)

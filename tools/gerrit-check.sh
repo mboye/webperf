@@ -11,8 +11,7 @@ code_review=0
 verified=-1
 
 COMMENTS="$WORKSPACE/review-comments.txt"
-BUILD_LOG_CLANG="$WORKSPACE/build-clang.log"
-BUILD_LOG_GCC="$WORKSPACE/build-gcc.log"
+BUILD_LOG="$WORKSPACE/build.log"
 
 git log -1
 
@@ -21,22 +20,18 @@ if [ $(cat $COMMENTS | wc -l) -ne 0 ]; then
     code_review=-1
 fi
 
-echo "Build log: $BUILD_LOG_CLANG"
+echo "Build log: $BUILD_LOG"
 
 build_clang() {
-    make CC=clang CFLAGS="-Weverything -Wno-padded" DEBUG=yes clean all > $BUILD_LOG_CLANG 2>&1
+    make CC=clang CFLAGS="-Weverything -Wno-padded" DEBUG=yes clean all > $BUILD_LOG 2>&1
+    rc=$?
+    [ $rc -ne 0 ] && echo "Build failed."
+    return $rc
 }
 
-build_gcc() {
-    make CC=gcc CFLAGS="-Wextra" DEBUG=yes clean all > $BUILD_LOG_GCC 2>&1
-}
-
-if build_clang && build_gcc && $WORKSPACE/webperf/ft/run-all-tests.sh
+if build_clang && $WORKSPACE/webperf/ft/run-all-tests.sh
 then
-    echo "Build successful."
     verified=1
-else
-    echo "Build failed."
 fi
 
 cppcheck --enable=all --inconclusive --xml --xml-version=2 */src */include 1>/dev/null 2> cppcheck.xml
