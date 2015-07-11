@@ -1,6 +1,6 @@
 #!/bin/bash
 ROOT="$(git rev-parse --show-toplevel)"
-WEBPERF="$ROOT/webperf/webperf"
+WEBPERF="$ROOT/build/bin/webperf"
 FT="$ROOT/webperf/ft"
 FT_COMMON="$FT/common"
 

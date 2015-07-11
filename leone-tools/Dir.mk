@@ -1,10 +1,9 @@
 TOOLS_SRCS = $(wildcard leone-tools/src/*.c)
-TOOLS_OBJS = $(patsubst %.c, %.o, $(TOOLS_SRCS))
+TOOLS_OBJS = $(addprefix $(BUILD_DIR)/, $(patsubst %.c, %.o, $(TOOLS_SRCS)))
+TOOLS_INCLUDES = -I leone-tools/include
 
-TRASH += $(TOOLS_OBJS)
-TRASH += $(patsubst %.c, %.d, $(TOOLS_SRCS))
+$(TOOLS_OBJS): $(BUILD_DIR)/%.o: %.c
+	mkdir -p $(dir $@)
+	$(CC) -MMD $(CFLAGS) $(TOOLS_INCLUDES) -c $< -o $@
 
-.tools: $(TOOLS_OBJS)
-	touch $@
-
--include $(patsubst %.c, %.d, $(TOOLS_SRCS))
+include leone-tools/ut/Dir.mk

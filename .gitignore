@@ -40,8 +40,18 @@ gmock-1.7.0/
 tags
 update-tags.sh
 /Debug/
+.settings/
 
 #Test output files
 *.stderr
 *.stdout
 *.output
+
+#Coverage files
+*.gcda
+*.gcno
+*.gcov
+*.cov
+
+#OSX
+.DS_Store

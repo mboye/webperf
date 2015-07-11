@@ -1,17 +1,21 @@
 WEBPERF_SRCS = $(wildcard webperf/src/*.c)
-WEBPERF_OBJS = $(patsubst %.c, %.o, $(WEBPERF_SRCS))
-WEBPERF_OBJS_EXT = $(HURL_OBJS) $(DNS_OBJS) $(TOOLS_OBJS)
+WEBPERF_OBJS = $(addprefix $(BUILD_DIR)/, $(patsubst %.c, %.o, $(WEBPERF_SRCS)))
+WEBPERF_INCLUDES = -I webperf/include \
+                   -I leone-dns-library/include \
+                   -I libhurl/include \
+                   -I leone-tools/include
 
-TRASH += webperf/webperf
-TRASH += $(WEBPERF_OBJS)
-TRASH += $(patsubst %.c, %.d, $(WEBPERF_SRCS))
+WEBPERF_LIBS += -lm -lssl -lcrypto $(LIB_PTHREAD)
 
-WEBPERF_LIBS += -lm -lssl -lcrypto
+$(WEBPERF_OBJS): $(BUILD_DIR)/%.o: %.c
+	mkdir -p $(dir $@)
+	$(CC) -MMD $(CFLAGS) $(WEBPERF_INCLUDES) -c $< -o $@
 
-webperf/webperf: .hurl .dns .tools $(WEBPERF_OBJS)
-	$(CC) -MMD $(CFLAGS) $(INCLUDES) -o $@ \
-		$(WEBPERF_OBJS_EXT) $(WEBPERF_OBJS) $(WEBPERF_LIBS)
+$(BUILD_DIR)/bin/webperf: $(HURL_OBJS) $(DNS_OBJS) $(TOOLS_OBJS) $(WEBPERF_OBJS)
+	mkdir -p $(dir $@)
+	$(CC) -MMD $(CFLAGS) -o $@ $^ $(WEBPERF_LIBS)
 	@echo
 	@echo "Output binary: $@"
 
--include $(patsubst %.c, %.d, $(WEBPERF_SRCS))
+webperf: $(BUILD_DIR)/bin/webperf
+.PHONY: webperf
