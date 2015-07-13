@@ -92,7 +92,7 @@
 <setting id="org.eclipse.cdt.core.formatter.insert_space_after_semicolon_in_for" value="insert"/>
 <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_if" value="do not insert"/>
 <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_method_invocation_arguments" value="do not insert"/>
-<setting id="org.eclipse.cdt.core.formatter.brace_position_for_block_in_case" value="next_line_shifted"/>
+<setting id="org.eclipse.cdt.core.formatter.brace_position_for_block_in_case" value="next_line"/>
 <setting id="org.eclipse.cdt.core.formatter.insert_space_after_postfix_operator" value="do not insert"/>
 <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_angle_bracket_in_template_parameters" value="insert"/>
 <setting id="org.eclipse.cdt.core.formatter.compact_else_if" value="true"/>
