@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include "hurl/hurl.h"
 #include "hurl/internal.h"
+#include "hurl/internal/hurl_parse.h"
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -165,7 +166,7 @@ HURLPath *hurl_add_url(HURLManager *manager,
                        void *tag)
 {
     hurl_url_parser_error_t parser_rc;
-    HURLParsedURL *parsed_url;
+    HURLParsedURL parsed_url;
     HURLDomain *domain;
     HURLServer *server;
     HURLPath *path, *p = NULL, *last = NULL;
@@ -178,23 +179,23 @@ HURLPath *hurl_add_url(HURLManager *manager,
     }
 
     /* Check if connection should use TLS. */
-    tls = strcmp(parsed_url->protocol, "https") == 0 ? 1 : 0;
+    tls = strcmp(parsed_url.protocol, "https") == 0 ? 1 : 0;
 
     pthread_mutex_lock(&manager->lock);
 
     /* Get domain */
-    if ((domain = hurl_get_domain(manager, parsed_url->hostname)) == NULL)
+    if ((domain = hurl_get_domain(manager, parsed_url.hostname)) == NULL)
     {
         pthread_mutex_unlock(&manager->lock);
-        hurl_parsed_url_free(parsed_url);
+        hurl_parsed_url_free(&parsed_url);
         return NULL;
     }
 
     /* Get server */
-    if ((server = hurl_get_server(domain, parsed_url->port, tls)) == NULL)
+    if ((server = hurl_get_server(domain, parsed_url.port, tls)) == NULL)
     {
         pthread_mutex_unlock(&manager->lock);
-        hurl_parsed_url_free(parsed_url);
+        hurl_parsed_url_free(&parsed_url);
         return NULL;
     }
 
@@ -204,11 +205,11 @@ HURLPath *hurl_add_url(HURLManager *manager,
         p = server->paths;
         while (p != NULL)
         {
-            if (strcasecmp(p->path, parsed_url->path) == 0)
+            if (strcasecmp(p->path, parsed_url.path) == 0)
             {
                 /* Duplicate path found */
                 hurl_debug(__func__, "Duplicate path detected. Ignoring it...");
-                hurl_parsed_url_free(parsed_url);
+                hurl_parsed_url_free(&parsed_url);
                 pthread_mutex_unlock(&manager->lock);
                 return NULL;
             }
@@ -222,17 +223,17 @@ HURLPath *hurl_add_url(HURLManager *manager,
     {
         /* Out of memory. */
         pthread_mutex_unlock(&manager->lock);
-        hurl_parsed_url_free(parsed_url);
+        hurl_parsed_url_free(&parsed_url);
         return NULL;
     }
 
     /* Copy path */
-    path->path = strdup(parsed_url->path);
+    path->path = strdup(parsed_url.path);
     if (!path->path && errno == ENOMEM)
     {
         /* Out of memory. */
         pthread_mutex_unlock(&manager->lock);
-        hurl_parsed_url_free(parsed_url);
+        hurl_parsed_url_free(&parsed_url);
         return NULL;
     }
 
@@ -268,7 +269,7 @@ HURLPath *hurl_add_url(HURLManager *manager,
 
     pthread_mutex_unlock(&manager->lock);
 
-    hurl_parsed_url_free(parsed_url);
+    hurl_parsed_url_free(&parsed_url);
     return path;
 
 }

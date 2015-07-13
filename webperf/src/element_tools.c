@@ -17,6 +17,7 @@
 #include <float.h>
 #include "hurl/hurl.h"
 #include "sk_metrics.h"
+#include <hurl/internal/hurl_parse.h>
 
 char *json_escape(char *str);
 char *cutoff(const char *str,
@@ -708,7 +709,7 @@ void *duplicate_element_stat(HURLPath *new_path,
                              char *destination_url)
 {
     hurl_url_parser_error_t parser_rc;
-    HURLParsedURL *parsed_url;
+    HURLParsedURL parsed_url;
     ElementStat *stat = calloc(1, sizeof(ElementStat));
     stat->url = strdup(destination_url);
     element_url_hash(stat, new_path);
@@ -721,12 +722,12 @@ void *duplicate_element_stat(HURLPath *new_path,
         {
             stat->http = calloc(1, sizeof(HTTPStat));
             stat->http->tls =
-                strcasecmp(parsed_url->protocol, "https") == 0 ? 1 : 0;
-            stat->http->domain = strdup(parsed_url->hostname);
-            stat->http->port = parsed_url->port;
-            stat->http->path = strdup(parsed_url->path);
+                strcasecmp(parsed_url.protocol, "https") == 0 ? 1 : 0;
+            stat->http->domain = strdup(parsed_url.hostname);
+            stat->http->port = parsed_url.port;
+            stat->http->path = strdup(parsed_url.path);
         }
-        hurl_parsed_url_free(parsed_url);
+        hurl_parsed_url_free(&parsed_url);
     }
     else
     {

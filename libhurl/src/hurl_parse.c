@@ -1,162 +1,238 @@
 #include <hurl/hurl.h>
-#include <hurl/internal.h>
+#include <hurl/internal/hurl_parse.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <assert.h>
 
 void hurl_parsed_url_free(HURLParsedURL *url)
 {
     free(url->hostname);
     free(url->path);
     free(url->protocol);
-    free(url);
 }
 
-hurl_url_parser_error_t hurl_parse_url(char *url_ptr,
-                                       HURLParsedURL **result)
+hurl_url_parser_error_t parse_protocol(HURLParsedURL *parsed_url,
+                                       const char* bgof_url)
 {
-    char *bgof_hostname = NULL, *eof_hostname = NULL;
-    char *eof_protocol = NULL;
-    char *bgof_port = NULL, *eof_port = NULL;
-    char *eof_url = NULL;
-    char *bgof_path = NULL;
+    parsed_url->protocol = NULL;
+    parsed_url->port = 0;
 
-    /* Allocate copy of URL on stack */
-    char *url = alloca(sizeof(char) * (strlen(url_ptr) + 1));
-    memcpy(url, url_ptr, strlen(url_ptr));
-    url[strlen(url_ptr)] = '\0';
-
-    (*result) = calloc(1, sizeof(HURLParsedURL));
-    if ((*result) == NULL)
+    char* eof_protocol = strstr(bgof_url, "://");
+    if (!eof_protocol)
     {
-        /* Out of memory. */
-        free(url);
-        return HURL_URL_PARSER_ERROR_MEMORY;
-    }
-
-    eof_url = url + strlen(url);
-
-    /* Find protocol. */
-    eof_protocol = strstr(url, "://");
-    if (eof_protocol == NULL)
-    {
-        free(*result);
-        hurl_debug(__func__, "Could not find :// in URL.");
-        return HURL_URL_PARSER_ERROR_PROTOCOL_DELIM;
-    }
-
-    if (eof_protocol - url <= 0)
-    {
-        /* Missing protocol. */
-        free(*result);
-        hurl_debug(__func__, "Could not find protocol in URL.");
         return HURL_URL_PARSER_ERROR_PROTOCOL;
     }
 
-    (*result)->protocol = hurl_allocstrcpy(url,
-                                           (size_t)(eof_protocol - url),
-                                           1);
-    /* hurl_debug(__func__, "Protocol: %s", (*result)->protocol); */
-
-    if (strlen((*result)->protocol) + 3 == strlen(url))
+    ssize_t protocol_len =  eof_protocol - bgof_url;
+    if (protocol_len == 0)
     {
-        hurl_parsed_url_free(*result);
-        hurl_debug(__func__, "Could not find hostname in URL.");
-        return HURL_URL_PARSER_HOSTNAME;
+        return HURL_URL_PARSER_ERROR_PROTOCOL;
     }
-    /* Find hostname */
-    bgof_hostname = eof_protocol + 3;
-    bgof_port = strstr(bgof_hostname, ":");
-    bgof_path = strstr(bgof_hostname, "/");
 
-    if (bgof_port && bgof_path)
+    int is_http = (strncasecmp("http", bgof_url, strlen("http")) == 0);
+    int is_https = (strncasecmp("https", bgof_url, strlen("https")) == 0);
+
+    if (!is_http && !is_https)
     {
-        /* URL contains both port and path. */
+        return HURL_URL_PARSER_ERROR_PROTOCOL;
+    }
+
+    protocol_len++;
+    parsed_url->protocol = malloc(sizeof(char) * (size_t)protocol_len);
+    snprintf(parsed_url->protocol, protocol_len, "%s", bgof_url);
+
+    return HURL_URL_PARSE_OK;
+}
+
+hurl_url_parser_error_t parse_hostname(HURLParsedURL* parsed_url,
+                                       const char* bgof_hostname,
+                                       const char* eof_url)
+{
+    parsed_url->hostname = NULL;
+
+    char* bgof_path = strstr(bgof_hostname, "/");
+    char* bgof_port = strstr(bgof_hostname, ":");
+
+    const char *eof_hostname;
+    if (bgof_port)
+    {
         if (bgof_port < bgof_path)
         {
-            /* ":" came before "/", so URL does contain port number. */
-            bgof_path = strstr(bgof_port, "/");
             eof_hostname = bgof_port;
-            eof_port = bgof_path;
         }
         else
         {
-            /* ":" came after "/", so URL does not contain port number. */
-            bgof_port = NULL;
             eof_hostname = bgof_path;
         }
     }
-    else if (bgof_port && !bgof_path)
+    else if (bgof_path)
     {
-        /* URL contains port but no path. */
-        eof_port = eof_url;
-        eof_hostname = bgof_port;
-    }
-    else if (!bgof_port && bgof_path)
-    {
-        /* URL contains path but no port. */
         eof_hostname = bgof_path;
     }
     else
     {
-        /* URL contains neither port nor path. */
         eof_hostname = eof_url;
     }
 
-    /* Parse port number. */
-    if (bgof_port && eof_port)
+    ssize_t hostname_len = eof_hostname - bgof_hostname;
+    if (hostname_len == 0)
     {
-        (*result)->port = (unsigned short)strtol(bgof_port + 1, &eof_port, 10);
-        if ((*result)->port <= 0 || (*result)->port > 65535)
+        return HURL_URL_PARSER_ERROR_HOSTNAME;
+    }
+
+    hostname_len++;
+    parsed_url->hostname = malloc(sizeof(char) * (size_t)hostname_len);
+    if (!parsed_url->hostname)
+    {
+        return HURL_URL_PARSER_ERROR_MEMORY;
+    }
+
+    snprintf(parsed_url->hostname, hostname_len, "%s", bgof_hostname);
+
+    return HURL_URL_PARSER_ERROR_NONE;
+}
+
+hurl_url_parser_error_t parse_port(HURLParsedURL* parsed_url,
+                                   const char* eof_hostname,
+                                   const char* eof_url)
+{
+    uint16_t* port = &parsed_url->port;
+
+    if (eof_hostname[0] == '/' ||
+        eof_hostname == eof_url)
+    {
+        if (strcasecmp("http", parsed_url->protocol) == 0)
         {
-            /* Invalid port number. */
-            hurl_parsed_url_free(*result);
-            hurl_debug(__func__, "Invalid port number.");
-            return HURL_URL_PARSER_ERROR_PORT;
+            *port = 80;
         }
+        else if (strcasecmp("https", parsed_url->protocol) == 0)
+        {
+            *port = 443;
+        }
+
+        return HURL_URL_PARSER_ERROR_NONE;
     }
     else
     {
-        if (strcasecmp((*result)->protocol, "https") == 0)
+        assert(eof_hostname[0] == ':');
+
+        const char* bgof_port = eof_hostname + 1;
+        char* eof_port;
+
+        char* bgof_path = strstr(bgof_port, "/");
+        if (bgof_path)
         {
-            (*result)->port = 443;
+            eof_port = bgof_path;
         }
         else
         {
-            (*result)->port = 80;
+            eof_port = (char *)eof_url;
+        }
+
+        unsigned long parsed_port = strtoul(bgof_port, &eof_port, 10);
+
+        int is_valid_port = parsed_port > 0 &&
+                            parsed_port < UINT16_MAX;
+
+        if (is_valid_port)
+        {
+            *port = (uint16_t)parsed_port;
+            return HURL_URL_PARSER_ERROR_NONE;
+        }
+        else
+        {
+            *port = 0;
+            return HURL_URL_PARSER_ERROR_PORT;
         }
     }
+}
 
-    /*hurl_debug(__func__, "Port: %u", (*result)->port);*/
+hurl_url_parser_error_t parse_path(HURLParsedURL *result,
+                                   const char* eof_hostname,
+                                   const char* eof_url)
+{
+    assert(eof_hostname);
 
-    if (eof_hostname - bgof_hostname <= 0)
+    char* bgof_path = strstr(eof_hostname, "/");
+    if(bgof_path)
     {
-        /* Empty hostname. */
-        hurl_parsed_url_free(*result);
-        hurl_debug(__func__, "Empty hostname.");
-        return HURL_URL_PARSER_HOSTNAME_LENGTH;
-    }
-    (*result)->hostname =
-        hurl_allocstrcpy(bgof_hostname,
-                         (size_t)(eof_hostname - bgof_hostname),
-                         1);
+        ssize_t path_len = eof_url - bgof_path + 1;
 
-    if (bgof_path)
-    {
-        (*result)->path = hurl_allocstrcpy(bgof_path,
-                                           (size_t)(eof_url - bgof_path),
-                                           1);
+        result->path = malloc(sizeof(char) * (size_t)path_len);
+        if (!result->path)
+        {
+            return HURL_URL_PARSER_ERROR_MEMORY;
+        }
+
+        snprintf(result->path, path_len, "%s", bgof_path);
     }
     else
     {
-        (*result)->path = hurl_allocstrcpy("/", 1, 1);
+        result->path = strdup("/");
     }
 
-    /*
-     hurl_debug(__func__, "Hostname: %s", (*result)->hostname);
-     hurl_debug(__func__, "Path: %s", (*result)->path);
-     */
     return HURL_URL_PARSER_ERROR_NONE;
+}
 
+hurl_url_parser_error_t hurl_parse_url(const char* url,
+                                       HURLParsedURL* parsed_url)
+{
+    typedef enum parsing_state_e {
+        PARSE_PROTOCOL,
+        PARSE_HOSTNAME,
+        PARSE_PORT,
+        PARSE_PATH,
+        PARSE_COMPLETE
+    } parsing_state_t;
+
+    memset(parsed_url, 0, sizeof(HURLParsedURL));
+
+    const char* eof_url = url + strlen(url);
+    const char* eof_hostname = NULL;
+    hurl_url_parser_error_t rc = HURL_URL_PARSER_ERROR_NONE;
+
+    for (parsing_state_t state = PARSE_PROTOCOL; state != PARSE_COMPLETE; state++)
+    {
+        switch (state)
+        {
+            case PARSE_PROTOCOL:
+                rc = parse_protocol(parsed_url, url);
+                break;
+            case PARSE_HOSTNAME:
+            {
+                const char* bgof_hostname = url +
+                                            strlen(parsed_url->protocol) +
+                                            strlen("://");
+
+                rc = parse_hostname(parsed_url, bgof_hostname, eof_url);
+            }
+                break;
+            case PARSE_PORT:
+                eof_hostname = url +
+                               strlen(parsed_url->protocol) +
+                               strlen("://") +
+                               strlen(parsed_url->hostname);
+
+                rc = parse_port(parsed_url, eof_hostname, eof_url);
+                break;
+            case PARSE_PATH:
+                rc = parse_path(parsed_url, eof_hostname, eof_url);
+                break;
+            case PARSE_COMPLETE:
+                break;
+        }
+
+        if (rc != HURL_URL_PARSER_ERROR_NONE)
+        {
+            free(parsed_url->protocol);
+            free(parsed_url->hostname);
+            free(parsed_url->path);
+
+            return rc;
+        }
+    }
+
+    return HURL_URL_PARSER_ERROR_NONE;
 }

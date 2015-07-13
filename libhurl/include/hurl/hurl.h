@@ -37,20 +37,8 @@ typedef struct hurl_domain HURLDomain;
 typedef struct hurl_manager HURLManager;
 typedef struct hurl_header HURLHeader;
 typedef struct hurl_pipeline_queue HURLPipelineQueue;
-typedef struct hurl_parsed_url HURLParsedURL;
 
 /* enums */
-enum hurl_url_parser_error_e
-{
-    HURL_URL_PARSER_ERROR_NONE,
-    HURL_URL_PARSER_ERROR_MEMORY,
-    HURL_URL_PARSER_ERROR_PROTOCOL_DELIM,
-    HURL_URL_PARSER_ERROR_PROTOCOL,
-    HURL_URL_PARSER_HOSTNAME,
-    HURL_URL_PARSER_ERROR_PORT,
-    HURL_URL_PARSER_HOSTNAME_LENGTH
-};
-
 enum hurl_http_feature_support
 {
     SUPPORTED, UNSUPPORTED, UNKNOWN_SUPPORT
@@ -117,7 +105,6 @@ enum hurl_hook_error_e
 };
 
 /* typedefs for enums */
-typedef enum hurl_url_parser_error_e hurl_url_parser_error_t;
 typedef enum hurl_connection_state HURLConnectionState;
 typedef enum hurl_dns_state HURLDNSState;
 typedef enum hurl_connect_result HURLConnectResult;
@@ -388,14 +375,6 @@ struct hurl_pipeline_queue
     HURLPipelineQueue *previous, *next; /* Linked list pointers */
 };
 
-struct hurl_parsed_url
-{
-    char *protocol; /* Protocol: http or https */
-    char *hostname; /* Host/domain name */
-    unsigned short port; /* Server port. Default is port 80 for HTTP and 443 for HTTPS */
-    char *path; /* Path e.g. /index.html */
-};
-
 void hurl_connection_free(HURLConnection *connection);
 
 void * hurl_connection_exec(void *connection_ptr);
@@ -470,11 +449,6 @@ int hurl_domain_nrof_paths(HURLDomain *domain,
 /* Count total number of paths in the HURL queue with a certain download state. */
 int hurl_nrof_paths(HURLManager *manager,
                     HURLDownloadState state);
-
-hurl_url_parser_error_t hurl_parse_url(char *url,
-                                       HURLParsedURL **result);
-
-void hurl_parsed_url_free(HURLParsedURL *url);
 
 void hurl_path_free(HURLManager *manager,
                     HURLPath *path);
