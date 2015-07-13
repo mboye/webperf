@@ -8,14 +8,13 @@ fi
 cd $WORKSPACE
 
 export GMOCK=/proj/webperf/gmock-1.7.0
+NUM_CORES=3
 
 code_review=0
 verified=-1
 
 COMMENTS="$WORKSPACE/review-comments.txt"
 BUILD_LOG="$WORKSPACE/build.log"
-
-git log -1
 
 "$WORKSPACE/tools/gerrit/detect-trailing-whitespace.sh" > $COMMENTS
 if [ $(cat $COMMENTS | wc -l) -ne 0 ]; then
@@ -24,10 +23,10 @@ fi
 
 echo "Build log: $BUILD_LOG"
 
-make BUILD_DIR=ut_coverage_build ut_coverage
+make -j $NUM_CORES BUILD_DIR=ut_coverage_build ut_coverage
 
 build_clang() {
-    make CC=clang CFLAGS="-Weverything -Wno-padded" DEBUG=yes clean all > $BUILD_LOG 2>&1
+    make -j $NUM_CORES CC=clang CFLAGS="-Weverything -Wno-padded" DEBUG=yes clean all > $BUILD_LOG 2>&1
     rc=$?
     [ $rc -ne 0 ] && echo "Build failed."
     return $rc

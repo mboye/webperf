@@ -24,5 +24,5 @@ for line in open(params.genhtml_log).readlines():
         state = 'function_coverage'
         break
 
-print '"Lines"', '"Functions"'
-print line_coverage, function_coverage
+print 'Lines, Functions'
+print '{}, {}'.format(line_coverage, function_coverage)

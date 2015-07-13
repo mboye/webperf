@@ -10,8 +10,8 @@ $(HURL_UT_OBJS): $(BUILD_DIR)/%.obj: %.cpp
 	mkdir -p $(dir $@)
 	$(CPP) -MMD $(CPPFLAGS) $(HURL_UT_INCLUDES) -c $< -o $@
 
-$(BUILD_DIR)/bin/libhurl_ut: $(HURL_OBJS) $(HURL_UT_OBJS)
+$(BUILD_DIR)/bin/libhurl_ut: ut_check $(HURL_OBJS) $(HURL_UT_OBJS)
 	mkdir -p $(dir $@)
 	$(CPP) -MMD $(CPPFLAGS) $(HURL_UT_LIBPATH) \
-		$^ $(GTEST_A) $(HURL_UT_LIBS) -o $@
+		$(filter-out ut_check,$^) $(GTEST_A) $(HURL_UT_LIBS) -o $@
 	-$@

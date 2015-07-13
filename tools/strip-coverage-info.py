@@ -2,6 +2,8 @@
 import argparse
 import sys
 
+DEBUG=False
+
 parser = argparse.ArgumentParser()
 parser.add_argument('root', help='Remove information about files outside this directory.')
 parser.add_argument('coverage_info', help='Coverage file to strip.')
@@ -29,9 +31,9 @@ def print_line(line, skip_line):
     if not skip_line and len(line) > 0:
         if not params.dry_run:
             fp.write('{}\n'.format(line));
-        print >> sys.stderr, 'Printing: {}'.format(line)
+        if DEBUG: print >> sys.stderr, 'Printing: {}'.format(line)
     else:
-        print >> sys.stderr, 'Removing: {}'.format(line)
+        if DEBUG: print >> sys.stderr, 'Removing: {}'.format(line)
 
 
 print_tn = False

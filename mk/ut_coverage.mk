@@ -16,11 +16,15 @@ ut_coverage: CPP=g++
 endif
 
 ut_coverage: clean webperf $(BUILD_DIR)/bin/libhurl_ut $(BUILD_DIR)/bin/leone_tools_ut
-	lcov --capture --ignore-errors gcov --no-recursion $(COV_PARAMS) -b . -o $(UT_COV_INFO)
-	cp $(UT_COV_INFO) $(UT_COV_INFO).org
-	$(COV_STRIP) $(shell pwd) $(UT_COV_INFO)
-	genhtml --prefix $(shell pwd) $(UT_COV_INFO) -o $(UT_COV_REPORT) | tee $(UT_GENHTML_LOG)
-	./tools/coverage-percentage.py $(UT_GENHTML_LOG) > $(UT_COV_REPORT)/coverage_percentage.csv
+	lcov --capture --ignore-errors gcov --no-recursion $(COV_PARAMS) -b . \
+		-o $(UT_COV_INFO)
 
+	$(COV_STRIP) $(shell pwd) $(UT_COV_INFO)
+
+	genhtml --prefix $(shell pwd) $(UT_COV_INFO) -o $(UT_COV_REPORT) | \
+		tee $(UT_GENHTML_LOG)
+
+	./tools/coverage-percentage.py \
+		$(UT_GENHTML_LOG) > $(BUILD_DIR)/ut_coverage.csv
 
 .PHONY: ut_coverage
