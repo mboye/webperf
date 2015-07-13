@@ -16,9 +16,7 @@
 
 # Build system
 *.d
-.dns
-.tools
-.hurl
+build/
 
 # Executables
 *.exe

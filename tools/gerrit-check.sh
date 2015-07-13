@@ -7,6 +7,8 @@ fi
 
 cd $WORKSPACE
 
+export GMOCK=/proj/webperf/gmock-1.7.0
+
 code_review=0
 verified=-1
 
@@ -21,6 +23,8 @@ if [ $(cat $COMMENTS | wc -l) -ne 0 ]; then
 fi
 
 echo "Build log: $BUILD_LOG"
+
+make BUILD_DIR=ut_coverage_build ut_coverage
 
 build_clang() {
     make CC=clang CFLAGS="-Weverything -Wno-padded" DEBUG=yes clean all > $BUILD_LOG 2>&1

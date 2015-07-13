@@ -19,13 +19,29 @@ line_number = 0
 skip_line = False
 remove_count = 0
 
+
+print >> sys.stderr, 'Root: {}'.format(params.root)
+
+
+def print_line(line, skip_line):
+    global fp
+    global params
+    if not skip_line and len(line) > 0:
+        if not params.dry_run:
+            fp.write('{}\n'.format(line));
+        print >> sys.stderr, 'Printing: {}'.format(line)
+    else:
+        print >> sys.stderr, 'Removing: {}'.format(line)
+
+
+print_tn = False
 for line in lines:
     line_number += 1
 
-    if state == 'TN' and line == 'TN:':
-        state = 'SF'
+    if line == 'TN:':
+        print_tn = True
         continue
-    elif state == 'SF':
+    elif line[0:2] == 'SF':
         if line[0:2] != 'SF':
             print 'Line {}: Expected SF'.format(line_number)
             sys.exit(1)
@@ -36,16 +52,14 @@ for line in lines:
                 print >> sys.stderr, 'Stripping coverage information: {}'.format(path)
                 remove_count += 1
             else:
-                fp.write('TN:\n')
+                if print_tn:
+                    print_line('TN:', False)
+                    print_tn = False
             state = 'EOR'
-    elif state == 'EOR' and line == 'end_of_record':
-        state = 'TN'
-        skip_line = False
-
-    if not skip_line and len(line) > 0:
-        if not params.dry_run:
-            fp.write('{}\n'.format(line));
-        else:
-            print line
+    if state == 'EOR':
+        print_line(line, skip_line)
+        if line == 'end_of_record':
+            state = 'TN'
+            skip_line = False
 
 print >> sys.stderr, 'Coverage information of {} files(s) were stripped.'.format(remove_count)
