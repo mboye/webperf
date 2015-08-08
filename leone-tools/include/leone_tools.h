@@ -10,52 +10,6 @@
 /* Return largest of two values. */
 #define MAX(X,Y) X < Y ? Y : X
 
-typedef struct ht HashTable;
-struct ht
-{
-    struct ht_entry **bins; /* Hash table bins. */
-    unsigned short nrof_bins;
-    unsigned int (*key)(void *); /* Pointer to key function. */
-    int (*compare)(void *,
-                   void *);
-    void (*free)(void *);
-};
-
-typedef struct ht_entry HashTableEntry;
-struct ht_entry
-{
-    void *key;
-    void *value;
-    HashTableEntry *prev, *next;
-};
-
-/* Insert key-value pair into hash table. */
-void *ht_insert(HashTable *table,
-                void *key,
-                void *value);
-
-/* Remove key-value pair from hash table. */
-void ht_remove(HashTable *table,
-               void *key);
-
-/* Initialize hash table. */
-HashTable *ht_init(unsigned short nrof_bins,
-                   unsigned int (*keyfunc)(void *),
-                   int (*comparefunc)(void *,
-                                      void *),
-                   void (*freefunc)(void *));
-
-/* Retrieve value from hash table using key. */
-void *ht_get(HashTable *table,
-             void *key);
-
-/* Get hash table bin. */
-HashTableEntry *ht_get_bin(HashTable *table,
-                           unsigned short bin);
-
-/* Free hash table structure. */
-void ht_free(HashTable *table);
-
 /* Write debug line containing calling thread ID, function, and a message. */
 void log_debug(const char *func,
                const char *msg,
@@ -96,9 +50,6 @@ void buffer_insert_short(struct buffer *buf,
 void buffer_insert_int(struct buffer *buf,
                        unsigned int value);
 
-/* Frees memory used by buffer structure.
- free_data == 0 => Only free contron structure.
- free_data == 1 => Free buffer contents in addition to control structure. */
 void buffer_free(struct buffer *buf);
 
 /* Initialize buffer.
