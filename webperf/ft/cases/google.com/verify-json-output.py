@@ -5,7 +5,7 @@ import sys
 print "Validating test results..."
 
 try:
-    data = json.load(open('webperf.output.json','r'))
+    data = json.load(open(sys.argv[1], 'r'))
     download_time_sum = 0
     for element in data['elements']:
         http = element['http']

@@ -1,25 +1,18 @@
 #!/bin/bash
-ROOT="$(git rev-parse --show-toplevel)"
-WEBPERF="$ROOT/build/bin/webperf"
-FT="$ROOT/webperf/ft"
-FT_COMMON="$FT/common"
+WEBPERF="${BUILD_DIR}/bin/webperf"
+FT_COMMON="webperf/ft/common"
+TMP="${BUILD_DIR}/ft/webperf"
 
-if [ -z "$FT_CACHE" ]; then
-    export FT_CACHE="$ROOT/ft_cache"
-    mkdir -p "$FT_CACHE"
-    echo "FT cache: $FT_CACHE"
-fi
+PHANTOMJS="${CACHE_DIR}/bin/phantomjs"
 
-if [ -z "$PHANTOMJS" ]
-then
-    echo "Environment variable PHANTOMJS not set."
-    echo "Assuming phantomjs is in your PATH..."
-    export PHANTOMJS="phantomjs"
-fi
+TEST_DIR=$(dirname "${BASH_SOURCE[1]}")
 
-update_urls() {
+mkdir -p "${TMP}"
+
+update_urls()
+{
     if [ $# -ne 2 ]; then
-        echo "Usage: update_urls <URL> <output>" 1>&2
+        echo "Usage: update_urls.sh <URL> <output>" 1>&2
         return 1
     fi
 

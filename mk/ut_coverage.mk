@@ -24,6 +24,8 @@ ut_coverage: clean webperf $(BUILD_DIR)/bin/libhurl_ut $(BUILD_DIR)/bin/leone_to
 	genhtml --prefix $(shell pwd) $(UT_COV_INFO) -o $(UT_COV_REPORT) | \
 		tee $(UT_GENHTML_LOG)
 
+	$(info Coverage report: $(UT_COV_REPORT)/index.html)
+
 	./tools/coverage-percentage.py \
 		$(UT_GENHTML_LOG) > $(BUILD_DIR)/ut_coverage.csv
 

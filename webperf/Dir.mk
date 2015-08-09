@@ -18,4 +18,7 @@ $(BUILD_DIR)/bin/webperf: $(HURL_OBJS) $(DNS_OBJS) $(TOOLS_OBJS) $(WEBPERF_OBJS)
 	@echo "Output binary: $@"
 
 webperf: $(BUILD_DIR)/bin/webperf
+
 .PHONY: webperf
+
+include webperf/ft/Dir.mk

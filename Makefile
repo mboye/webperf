@@ -1,8 +1,10 @@
 BUILD_DIR := build
-PLATFORM = $(shell uname -s | tr 'A-Z' 'a-z')
+CACHE_DIR := .cache
+PLATFORM := $(shell uname -s | tr 'A-Z' 'a-z')
+ARCH := $(shell uname -m)
 
 CC := clang
-override CFLAGS += -Wall -Wextra -pedantic -std=gnu99
+override CFLAGS += -Weverything -Wall -Wextra -pedantic -std=gnu99
 
 CPP := clang++
 override CPPFLAGS += -std=c++11 -Wall -pedantic
@@ -20,7 +22,13 @@ GTEST ?= $(GMOCK)/gtest
 GTEST_A = $(GTEST)/lib/.libs/libgtest.a
 GMOCK_A = $(GMOCK)/lib/.libs/libgmock.a
 
+$(info Build directory is '$(BUILD_DIR)')
+$(info Cache directory is '$(CACHE_DIR)')
+
 all: webperf
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
 include mk/platform/$(PLATFORM).mk
 include leone-tools/Dir.mk
