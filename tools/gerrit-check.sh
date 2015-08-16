@@ -49,6 +49,13 @@ then
     code_review=-1
 fi
 
+# Check warnings
+echo "Comparing build log with last successful nightly build..."
+if ! tools/warnings.py --baseline "${BASELINE_BUILD_LOG}" "${BUILD_LOG}"
+then
+    echo "error: failed to compare build logs."
+fi
+
 if [ -z "$GERRIT_CHANGE_ID" ]
 then
     echo "Skipping Gerrit review..."

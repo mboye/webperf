@@ -9,7 +9,7 @@ then
     rc=1
 fi
 
-echo "Comparing compiler warnings with last successful build..."
+echo "Comparing build log with last successful nightly build..."
 tools/warnings.py --baseline "${BASELINE_BUILD_LOG}" build/build.log
 
 echo "Running scan-build..."
