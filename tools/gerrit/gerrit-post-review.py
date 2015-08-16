@@ -10,7 +10,7 @@ required_variables = ['GERRIT_CHANGE_ID', 'GERRIT_PATCHSET_REVISION',
 abort = False
 for env_var in required_variables:
     if not env_var in os.environ:
-        print "Required environement variable '{}' missing.".format(env_var)
+        print "Required environment variable '{}' missing.".format(env_var)
         abort = True
 
 

@@ -1,19 +1,16 @@
 #!/bin/bash
-set -u
-
 CODE_REVIEW=0
 VERIFIED=-1
 
-export BUILD_DIR=build
+BUILD_DIR=build
+CACHE_DIR=/proj/webperf/cache
 
 BUILD_LOG="${BUILD_DIR}/build.log"
 FT_LOG="${BUILD_DIR}/ft.log"
 QA_LOG="${BUILD_DIR}/quality.log"
 REVIEW_COMMENTS="${BUILD_DIR}/review-comments.txt"
 
-REVIEW_URL="${GERRIT_CHANGE_URL}/${GERRIT_PATCHSET_NUMBER}"
 
-export CACHE_DIR=/proj/webperf/cache
 
 if [ -d "${BUILD_DIR}" ]
 then
@@ -25,7 +22,7 @@ fi
 
 # Check build
 echo "Building everything..."
-if ! make all > "${BUILD_LOG}" 2>&1
+if ! make BUILD_DIR="${BUILD_DIR}" all > "${BUILD_LOG}" 2>&1
 then
     echo "error: build failed."
     echo "log file: ${BUILD_LOG}"
@@ -36,7 +33,7 @@ fi
 echo "Running functional tests..."
 if [ $VERIFIED -eq -1 ]
 then
-    if make check_ft > "${FT_LOG}" 2>&1
+    if make BUILD_DIR="${BUILD_DIR}" CACHE_DIR="${CACHE_DIR}" check_ft > "${FT_LOG}" 2>&1
     then
         VERIFIED=1
     else
@@ -51,18 +48,22 @@ if ! make REVIEW_COMMENTS="${REVIEW_COMMENTS}" check_whitespace \
     check_cppcheck > "${QA_LOG}" 2>&1
 then
     echo "warning: code quality check failed."
-    echo "check comments in Gerrit: ${REVIEW_URL}"
     code_review=-1
 fi
 
-echo "Posting Gerrit review..."
-export CODE_REVIEW
-export VERIFIED
-cat "${REVIEW_COMMENTS}" | tools/gerrit/gerrit-post-review.py
-if [ $? -ne 0 ]
+if [ -z "$GERRIT_CHANGE_ID" ]
 then
-    echo "error: failed to post Gerrit review."
-    exit 1
+    echo "Skipping Gerrit review..."
+else
+    echo "Posting Gerrit review..."
+    export CODE_REVIEW
+    export VERIFIED
+    cat "${REVIEW_COMMENTS}" | tools/gerrit/gerrit-post-review.py
+    if [ $? -ne 0 ]
+    then
+        echo "error: failed to post Gerrit review."
+        exit 1
+    fi
 fi
 
 if [ $VERIFIED -ne 1 ]
