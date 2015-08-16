@@ -157,7 +157,7 @@ char buffer_resize(struct buffer *buf,
 char buffer_cut_head(struct buffer *buf,
                      unsigned int adjustment)
 {
-    int new_size;
+    size_t new_size;
     char *tmp;
     assert(buf!=NULL);
     assert(adjustment <= buf->data_len);
