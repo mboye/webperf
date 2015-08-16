@@ -10,8 +10,6 @@ FT_LOG="${BUILD_DIR}/ft.log"
 QA_LOG="${BUILD_DIR}/quality.log"
 REVIEW_COMMENTS="${BUILD_DIR}/review-comments.txt"
 
-
-
 if [ -d "${BUILD_DIR}" ]
 then
     echo "Removing existing build directory '${BUILD_DIR}'"

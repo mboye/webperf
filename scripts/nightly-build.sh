@@ -9,6 +9,9 @@ then
     rc=1
 fi
 
+echo "Comparing compiler warnings with last successful build..."
+tools/warnings.py --baseline "${BASELINE_BUILD_LOG}" build/build.log
+
 echo "Running scan-build..."
 mkdir -p "${SCAN_BUILD_DIR}"
 if ! scan-build -o scan-build-report \
