@@ -557,8 +557,7 @@ int dns_resolve(DNSCache *cache,
                                         gettimeofday(&tm_end, NULL);
 
                                         /* Quickly check transaction ID. */
-                                        rcvd_id =
-                                            ntohs(chars_to_short(respbuf));
+                                        rcvd_id = read_uint16(respbuf);
 
                                         if (rcvd_id == qpacket_id)
                                         {

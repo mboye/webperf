@@ -19,28 +19,27 @@ char dns_message_parse(DNSResolverState *state,
                        int respbuf_len,
                        char *qname)
 {
-    char *cursor = respbuf, *cursor_max;
+    char *cursor = respbuf;
+    char* cursor_max = respbuf + respbuf_len;
     unsigned short r, nrof_records;
     struct buffer *namebuf;
     int label_len;
     unsigned short flags;
-    unsigned short *cursor_short;
     DNSMessage *response;
     DNSRecord *record, **record_ptr = NULL;
     DNSSection section = 0;
     char soa_exit = 0;
     char cacheable = 1;
 
-    cursor_short = (unsigned short *)respbuf;
     response = state->responses[state->nrof_responses];
     response->type = RESPONSE;
 
     /* Get transaction ID. */
-    response->id = ntohs(chars_to_short(cursor));
+    response->id = read_uint16(cursor);
     cursor += 2;
 
-    cursor_short = (unsigned short *)cursor;
-    flags = ntohs(*cursor_short);
+    flags = read_uint16(cursor);
+
     /* Parse flags. */
     response->type = dns_message_flag(&flags, DNS_FLAG_TYPE, DNS_FLAG_READ);
     response->authoritative = dns_message_flag(&flags,
@@ -97,21 +96,20 @@ char dns_message_parse(DNSResolverState *state,
 
     /* Update cursors. */
     cursor += 2;
-    cursor_short++;
 
     /* Read number of questions, answers, name servers, and additional records. */
-    response->nrof_questions = ntohs(*cursor_short++);
-    response->nrof_answers = ntohs(*cursor_short++);
-    response->nrof_authorities = ntohs(*cursor_short++);
-    response->nrof_additionals = ntohs(*cursor_short++);
+    response->nrof_questions = read_uint16(cursor);
+    cursor += 2;
+    response->nrof_answers = read_uint16(cursor);
+    cursor += 2;
+    response->nrof_authorities = read_uint16(cursor);
+    cursor += 2;
+    response->nrof_additionals = read_uint16(cursor);
+    cursor += 2;
 
     /* Allocate memory for record pointers. */
     nrof_records = response->nrof_questions + response->nrof_answers
         + response->nrof_authorities + response->nrof_additionals;
-
-    /* Update char cursor. */
-    cursor = (char *)cursor_short;
-    cursor_max = cursor + respbuf_len;
 
     /* Read records. */
     for (r = 0; r < nrof_records; r++)
@@ -179,19 +177,19 @@ char dns_message_parse(DNSResolverState *state,
         }
 
         /* Read type and class. */
-        record->type = ntohs(chars_to_short(cursor));
+        record->type = read_uint16(cursor);
         cursor += 2;
-        record->class = ntohs(chars_to_short(cursor));
+        record->class = read_uint16(cursor);
         cursor += 2;
         if (section != QUESTIONS)
         {
             log_debug(__func__, "Section: %d", section);
 
             /* Read TTL of record. */
-            record->ttl = ntohl(chars_to_int(cursor));
+            record->ttl = read_uint32(cursor);
             cursor += 4;
             /* Read length of RDATA. */
-            record->data_len = ntohs(chars_to_short(cursor));
+            record->data_len = read_uint16(cursor);
             cursor += 2;
 
             /* Check that RDATA is within buffer. */
@@ -418,18 +416,18 @@ char dns_parse_rr_soa(char *bgof_msg,
     }
 
     /* Read serial. */
-    soa->serial = ntohl(chars_to_int(*cursor));
+    soa->serial = read_uint32(*cursor);
     (*cursor) += 4;
     /* Read refresh time. */
-    soa->refresh = ntohl(chars_to_int(*cursor));
+    soa->refresh = read_uint32(*cursor);
     (*cursor) += 4;
     /* Read retry time. */
-    soa->retry = ntohl(chars_to_int(*cursor));
+    soa->retry = read_uint32(*cursor);
     (*cursor) += 4;
     /* Read expiry time. */
-    soa->expire = ntohl(chars_to_int(*cursor));
+    soa->expire = read_uint32(*cursor);
     (*cursor) += 4;
-    soa->minimum_ttl = ntohl(chars_to_int(*cursor));
+    soa->minimum_ttl = read_uint32(*cursor);
     (*cursor) += 4;
 
     /* Point data pointer to SOA record structure. */
@@ -521,7 +519,7 @@ char dns_parse_rr_label(char *bgof_msg,
         if (((chunk_len >> 6) & 0x03) == 3)
         {
             /* Read label offset. */
-            label_offset = ntohs(chars_to_short(*cursor));
+            label_offset = read_uint16(*cursor);
             label_offset &= 0x3fff;
             label_ptr = bgof_msg + label_offset;
             /*log_debug(__func__, "Label pointer detected with offset %u",

@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include "dns_cache.h"
+#include <stdint.h>
 
 int dns_load_resolv_conf(DNSCache *cache,
                          char *conf)
@@ -146,35 +147,18 @@ int dns_load_resolv_conf(DNSCache *cache,
     return DNS_OK;
 }
 
-unsigned short chars_to_short(char *bgof_value)
+uint16_t read_uint16(char *bgof_value)
 {
-    unsigned char x = *bgof_value, y = *(bgof_value + 1);
-#if __BYTE_ORDER == LITTLE_ENDIAN
-    /* Smallest value at the lowest index. */
-    return (unsigned short) (x + (y << 8));
-#else
-    /* Largest value at the lowest index. */
-    return (unsigned short)(y + (x << 8));
-#endif
+    uint16_t result;
+    memcpy(&result, bgof_value, sizeof(result));
+    return ntohs(result);
 }
 
-unsigned int chars_to_int(char *bgof_value)
+uint32_t read_uint32(char *bgof_value)
 {
-    unsigned int result = 0;
-#if __BYTE_ORDER == LITTLE_ENDIAN
-    /* Smallest value at the lowest index. */
-    result = bgof_value[3] << 24;
-    result += bgof_value[2] << 16;
-    result += bgof_value[1] << 8;
-    result += bgof_value[0];
-#else
-    /* Largest value at the lowest index. */
-    result = bgof_value[0] << 24;
-    result += bgof_value[1] << 16;
-    result += bgof_value[2] << 8;
-    result += bgof_value[3];
-#endif
-    return result;
+    uint32_t result = 0;
+    memcpy(&result, bgof_value, sizeof(result));
+    return ntohl(result);
 }
 
 /* Order records in ANSWER and ADDITIONAL by network preference. */
@@ -406,4 +390,3 @@ void dns_cache_print(DNSMessage *root,
         dns_cache_print(node, p);
     }
 }
-

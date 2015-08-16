@@ -21,9 +21,9 @@ int dns_message_nwp(DNSMessage *msg,
                     NetworkPreference nwp,
                     DNSRecord ***nwp_records);
 
-unsigned int chars_to_int(char *bgof_value);
-unsigned short chars_to_short(char *bgof_value);
-unsigned short chars_to_short(char *bgof_value);
+uint32_t read_uint32(char *bgof_value);
+uint16_t read_uint16(char *bgof_value);
+
 void dns_cache_print(DNSMessage *root,
                      char *parent);
 
