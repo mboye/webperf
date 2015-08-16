@@ -11,7 +11,7 @@ double median_double(double *values,
                     unsigned int n)
 {
     unsigned int i, j;
-    double *sorted = malloc(sizeof(float) * n);
+    double *sorted = malloc(sizeof(double) * n);
     double tmp;
 
     if (n == 0)
@@ -177,10 +177,10 @@ void print_sk_metrics_csv(int interrupted,
         unsigned int http_n = 0, https_n = 0;
         unsigned int dns_ok_n = 0, dns_error_n = 0;
         double avg_dns_ok_time = -1, avg_dns_error_time = -1;
-        double *lst_dns_ok_time = calloc(test->nrof_elements, sizeof(float));
-        double *lst_dns_error_time = calloc(test->nrof_elements, sizeof(float));
+        double *lst_dns_ok_time = calloc(test->nrof_elements, sizeof(double));
+        double *lst_dns_error_time = calloc(test->nrof_elements, sizeof(double));
         double avg_dns_ok_iterations = -1, avg_dns_error_iterations = -1;
-        int *lst_dns_ok_iterations = calloc(test->nrof_elements, sizeof(float));
+        int *lst_dns_ok_iterations = calloc(test->nrof_elements, sizeof(int));
         int *lst_dns_error_iterations = calloc(test->nrof_elements,
                                                sizeof(float));
         unsigned int http_no_ip_n = 0;
@@ -188,25 +188,25 @@ void print_sk_metrics_csv(int interrupted,
             http_ok_connect_n = 0, http_ok_connect_ssl_n = 0;
         double avg_http_ok_connect_time = -1, avg_http_ok_ssl_connect_time = -1;
         double *lst_http_ok_connect_time = calloc(test->nrof_elements,
-                                                 sizeof(float));
+                                                 sizeof(double));
         double *lst_http_ok_ssl_connect_time = calloc(test->nrof_elements,
-                                                     sizeof(float));
+                                                     sizeof(double));
         double avg_http_ok_download_time = -1;
         double *lst_http_ok_download_time = calloc(test->nrof_elements,
-                                                  sizeof(float));
+                                                  sizeof(double));
         double avg_http_ok_download_size = -1;
         double *lst_http_ok_download_size = calloc(test->nrof_elements,
-                                                  sizeof(float));
+                                                  sizeof(double));
         double avg_https_ok_download_time = -1;
         double *lst_https_ok_download_time = calloc(test->nrof_elements,
-                                                   sizeof(float));
+                                                   sizeof(double));
         double avg_https_ok_download_size = -1;
         double *lst_https_ok_download_size = calloc(test->nrof_elements,
-                                                   sizeof(float));
+                                                   sizeof(double));
         double avg_ttfb_header = -1;
-        double *lst_ttfb_header = calloc(test->nrof_elements, sizeof(float));
+        double *lst_ttfb_header = calloc(test->nrof_elements, sizeof(double));
         double avg_ttfb_body = -1;
-        double *lst_ttfb_body = calloc(test->nrof_elements, sizeof(float));
+        double *lst_ttfb_body = calloc(test->nrof_elements, sizeof(double));
         unsigned int http_redirects = 0;
         int dns_success = 0;
         CDNProvider element_cdn;
@@ -684,7 +684,7 @@ double page_load_time(int completeness)
     ElementStat *e;
     double tmp;
     unsigned int n = test->nrof_elements;
-    double *sorted = calloc(n, sizeof(float));
+    double *sorted = calloc(n, sizeof(double));
     unsigned int i = 0, j;
     double result;
     struct timeval diff;
