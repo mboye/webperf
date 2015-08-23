@@ -5,7 +5,7 @@
 #include "hurl/hurl.h"
 #include "hurl/internal.h"
 
-struct addrinfo resolver_hints_init()
+static struct addrinfo resolver_hints_init()
 {
     struct addrinfo hints = {
         .ai_family = AF_UNSPEC,
@@ -16,6 +16,7 @@ struct addrinfo resolver_hints_init()
         .ai_addr = NULL,
         .ai_next = NULL
     };
+
     return hints;
 }
 
@@ -48,7 +49,7 @@ void hurl_resolve(HURLDomain *domain)
 
     if (domain->nrof_addresses > 0)
     {
-        domain->addresses = calloc(domain->nrof_addresses,
+        domain->addresses = calloc((size_t)domain->nrof_addresses,
                                    sizeof(struct sockaddr *));
         if (!domain->addresses)
         {
@@ -72,15 +73,17 @@ void hurl_resolve(HURLDomain *domain)
             char address_str[INET6_ADDRSTRLEN];
             if (AF_INET == r->ai_addr->sa_family)
             {
-                const void* addr =
-                    &((struct sockaddr_in *)r->ai_addr)->sin_addr;
-                inet_ntop(AF_INET, addr, address_str, INET6_ADDRSTRLEN);
+                struct sockaddr_in v4sock;
+                memcpy(&v4sock, r->ai_addr, sizeof(v4sock));
+                const void* address = &v4sock.sin_addr;
+                inet_ntop(AF_INET, address, address_str, INET6_ADDRSTRLEN);
             }
             else
             {
-                const void* addr =
-                    &((struct sockaddr_in6*)r->ai_addr)->sin6_addr;
-                inet_ntop(AF_INET6, addr, address_str, INET6_ADDRSTRLEN);
+                struct sockaddr_in6 v6sock;
+                memcpy(&v6sock, r->ai_addr, sizeof(v6sock));
+                const void* address = &v6sock.sin6_addr;
+                inet_ntop(AF_INET6, address, address_str, INET6_ADDRSTRLEN);
             }
 
             hurl_debug(__func__, "[ %s ] %s", domain->domain, address_str);
